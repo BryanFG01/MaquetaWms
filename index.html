@@ -132,7 +132,7 @@
                     JS
                 </div>
                 <div>
-                    <p class="text-xs font-semibold text-white leading-none">Juan Silva</p>
+                    <p class="text-xs font-semibold text-white leading-none">Bryan</p>
                     <p class="text-[10px] text-slate-400 mt-0.5">Administrador WMS</p>
                 </div>
             </div>
@@ -1032,11 +1032,11 @@
                 { id: 'STK-104', productId: 'P-04', zoneId: 'Z-C1', clientId: 'CLI-01', quantity: 90, m2Used: 50 }
             ],
             inbounds: [
-                { id: 'ING-2026-001', timestamp: '2026-09-01 08:30', clientId: 'CLI-01', productId: 'P-01', zoneId: 'Z-A1', qty: 500, m2: 100, user: 'Juan Silva' },
+                { id: 'ING-2026-001', timestamp: '2026-09-01 08:30', clientId: 'CLI-01', productId: 'P-01', zoneId: 'Z-A1', qty: 500, m2: 100, user: 'Bryan' },
                 { id: 'ING-2026-002', timestamp: '2026-09-05 14:15', clientId: 'CLI-02', productId: 'P-02', zoneId: 'Z-A2', qty: 1200, m2: 150, user: 'Pedro Gomez' }
             ],
             outbounds: [
-                { id: 'SAL-2026-001', timestamp: '2026-09-08 10:00', clientId: 'CLI-01', productId: 'P-01', zoneId: 'Z-A1', qty: 50, destination: 'Despacho Cliente Alfa Medellín', user: 'Juan Silva' }
+                { id: 'SAL-2026-001', timestamp: '2026-09-08 10:00', clientId: 'CLI-01', productId: 'P-01', zoneId: 'Z-A1', qty: 50, destination: 'Despacho Cliente Alfa Medellín', user: 'Bryans' }
             ],
             invoices: [
                 { id: 'INV-101', number: 'FAC-2026-01', clientId: 'CLI-01', issueDate: '2026-08-01', dueDate: '2026-08-31', total: 4500, status: 'VENCIDA' },
@@ -1049,8 +1049,8 @@
                 { timestamp: '2026-09-08 10:00', type: 'SALIDA', sku: 'SKU-PAL-001', productName: 'Pallets Madera Estándar', clientName: 'Logística Alfa S.A.S.', in: 0, out: 50, balance: 450, zone: 'Zona A1 (Carga Fría)', details: 'Despacho Carga Medellín' }
             ],
             auditLogs: [
-                { timestamp: '2026-09-01 08:30', module: 'INGRESOS', action: 'Ingreso de mercancía', detail: 'Ingreso 500 unidades de SKU-PAL-001 en Zona A1', user: 'Juan Silva' },
-                { timestamp: '2026-09-08 10:00', module: 'SALIDAS', action: 'Despacho de mercancía', detail: 'Salida 50 unidades de SKU-PAL-001 de Zona A1', user: 'Juan Silva' }
+                { timestamp: '2026-09-01 08:30', module: 'INGRESOS', action: 'Ingreso de mercancía', detail: 'Ingreso 500 unidades de SKU-PAL-001 en Zona A1', user: 'Bryan' },
+                { timestamp: '2026-09-08 10:00', module: 'SALIDAS', action: 'Despacho de mercancía', detail: 'Salida 50 unidades de SKU-PAL-001 de Zona A1', user: 'Bryans' }
             ]
         };
 
@@ -1163,7 +1163,7 @@
             }, 3000);
         }
 
-        function logAudit(module, action, detail, user = 'Juan Silva') {
+        function logAudit(module, action, detail, user = 'Bryan') {
             const timestamp = new Date().toLocaleString();
             state.auditLogs.unshift({ timestamp, module, action, detail, user });
             renderAuditLogs();
@@ -1751,7 +1751,7 @@
             const ingId = `ING-2026-00${state.inbounds.length + 1}`;
 
             // 1. Record Inbound
-            state.inbounds.unshift({ id: ingId, timestamp, clientId, productId, zoneId, qty, m2, user: 'Juan Silva' });
+            state.inbounds.unshift({ id: ingId, timestamp, clientId, productId, zoneId, qty, m2, user: 'Bryan' });
 
             // 2. Update Stock
             let existingStock = state.stock.find(s => s.productId === productId && s.zoneId === zoneId);
@@ -1811,7 +1811,7 @@
             const zone = state.zones.find(z => z.id === stk.zoneId);
 
             // Record Outbound
-            state.outbounds.unshift({ id: salId, timestamp, clientId: stk.clientId, productId: stk.productId, zoneId: stk.zoneId, qty, destination, user: 'Juan Silva' });
+            state.outbounds.unshift({ id: salId, timestamp, clientId: stk.clientId, productId: stk.productId, zoneId: stk.zoneId, qty, destination, user: 'Bryan' });
 
             // Kardex
             state.kardex.unshift({
