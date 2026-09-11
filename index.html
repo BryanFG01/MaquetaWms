@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogiMaster WMS - Sistema de Gestión de Almacenes y Cartera</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .modal-backdrop { background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .zone-box { transition: all 0.2s ease-in-out; }
+        .zone-box:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .sidebar-transition { transition: transform 0.3s ease-in-out, width 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col md:flex-row overflow-x-hidden">
+
+    <!-- MOBILE OVERLAY BACKDROP -->
+    <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-slate-900/50 z-40 hidden md:hidden backdrop-blur-sm transition-opacity"></div>
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside id="main-sidebar" class="fixed md:sticky inset-y-0 md:inset-y-auto left-0 md:top-0 z-50 w-64 bg-black text-slate-300 flex flex-col justify-between sidebar-transition -translate-x-full md:translate-x-0 shadow-2xl md:shadow-none shrink-0 h-screen">
+        <div>
+            <!-- Sidebar Header & Brand Logo -->
+            <div class="h-16 px-5 flex items-center justify-between border-b border-slate-800">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-brand-500 text-white p-2 rounded-lg font-bold text-lg shadow">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-base tracking-wide block leading-tight text-white"> <span class="text-brand-400 font-normal">WMS</span></span>
+                        <span class="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">Bodega & Cartera</span>
+                    </div>
+                </div>
+                <button onclick="toggleSidebar(false)" class="md:hidden text-slate-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Warehouse Status Card -->
+            <!-- <div class="p-4 border-b border-slate-800/80">
+                <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60">
+                    <div class="flex items-center space-x-2 text-xs text-slate-300 mb-1">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="font-semibold text-white">Bodega Principal</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Capacidad Total: <strong class="text-slate-200">1,200 m²</strong></p>
+                </div>
+            </div> -->
+
+            <!-- Vertical Navigation Menu -->
+            <nav class="p-3 space-y-1.5 custom-scrollbar overflow-y-auto max-h-[calc(100vh-210px)]">
+                <p class="px-3 text-[10px] uppercase tracking-wider font-bold text-slate-500 my-2">Módulos Principales</p>
+                
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full px-3.5 py-2.5 rounded-xl text-xs font-medium flex items-center space-x-3 transition-colors bg-brand-600 text-white shadow-md font-bold">
+                    <i class="fa-solid fa-chart-line w-5 text-center text-sm"></i>
+                    <span>KPIs & Indicadores</span>
+                </button>
+
+                <button onclick="switchTab('ocupacion')" id="nav-ocupacion" class="nav-btn w-full px-3.5 py-2.5 rounded-xl text-xs font-medium flex items-center space-x-3 transition-colors text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-warehouse w-5 text-center text-sm"></i>
+                    <span>Plano & Ocupación</span>
+                </button>
+
+                <button onclick="switchTab('ingresos')" id="nav-ingresos" class="nav-btn w-full px-3.5 py-2.5 rounded-xl text-xs font-medium flex items-center space-x-3 transition-colors text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-truck-ramp-box w-5 text-center text-sm"></i>
+                    <span>Ingresos</span>
+                </button>
+
+                <button onclick="switchTab('salidas')" id="nav-salidas" class="nav-btn w-full px-3.5 py-2.5 rounded-xl text-xs font-medium flex items-center space-x-3 transition-colors text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-dolly w-5 text-center text-sm"></i>
+                    <span>Salidas</span>
+                </button>
+
+                <button onclick="switchTab('inventario')" id="nav-inventario" class="nav-btn w-full px-3.5 py-2.5 rounded-xl text-xs font-medium flex items-center space-x-3 transition-colors text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-boxes-packing w-5 text-center text-sm"></i>
+                    <span>Inventario & Kardex</span>
+                </button>
+
+                <button onclick="switchTab('cartera')" id="nav-cartera" class="nav-btn w-full px-3.5 py-2.5 rounded-xl text-xs font-medium flex items-center space-x-3 transition-colors text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-file-invoice-dollar w-5 text-center text-sm"></i>
+                    <span>Cartera & Facturación</span>
+                </button>
+
+                <p class="px-3 text-[10px] uppercase tracking-wider font-bold text-slate-500 pt-4 pb-1">Administración</p>
+
+                <button onclick="switchTab('maestros')" id="nav-maestros" class="nav-btn w-full px-3.5 py-2.5 rounded-xl text-xs font-medium flex items-center space-x-3 transition-colors text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-sliders w-5 text-center text-sm"></i>
+                    <span>Maestros & Config</span>
+                </button>
+
+                <button onclick="switchTab('auditoria')" id="nav-auditoria" class="nav-btn w-full px-3.5 py-2.5 rounded-xl text-xs font-medium flex items-center space-x-3 transition-colors text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-clock-rotate-left w-5 text-center text-sm"></i>
+                    <span>Auditoría</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Sidebar Footer & User Profile -->
+        <div class="p-4 border-t border-slate-800 flex items-center justify-between bg-slate-950/50">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-xs ring-2 ring-brand-400/30">
+                    JS
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-white leading-none">Juan Silva</p>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Administrador WMS</p>
+                </div>
+            </div>
+            <button title="Cerrar sesión" onclick="showToast('Sesión de usuario activa', 'info')" class="text-slate-400 hover:text-white p-1">
+                <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- CONTENT WRAPPER -->
+    <div class="flex-grow flex flex-col min-w-0 min-h-screen">
+
+        <!-- TOP APP HEADER -->
+        <header class="bg-white border-b border-slate-200 h-16 sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between shadow-sm">
+            <div class="flex items-center space-x-3">
+                <button onclick="toggleSidebar(true)" class="md:hidden text-slate-600 hover:text-slate-900 p-2 rounded-lg hover:bg-slate-100">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                <div>
+                    <h2 id="current-module-title" class="text-base font-bold text-slate-800">KPIs & Indicadores</h2>
+                    <p class="text-[11px] text-slate-400 hidden sm:block">Panel General de Logística y Cartera integrados</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <div class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-2 transition-colors cursor-pointer" onclick="switchTab('ocupacion')">
+                    <i class="fa-solid fa-chart-pie text-brand-600"></i>
+                    <span class="hidden sm:inline">Ocupación:</span>
+                    <span id="topbar-occupancy-badge" class="font-bold text-brand-700">0%</span>
+                </div>
+                <button onclick="openModal('modal-new-inbound')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1">
+                    <i class="fa-solid fa-plus"></i>
+                    <span class="hidden sm:inline">Nuevo Ingreso</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow">
+
+            <!-- ========================================== -->
+            <!-- MODULE 1: DASHBOARD & KPIS -->
+            <!-- ========================================== -->
+            <section id="mod-dashboard" class="tab-content space-y-6">
+                <!-- Top KPI Metric Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Card 1: Bodega Occupancy -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-medium text-slate-400 block mb-1">Ocupación Bodega</span>
+                            <h3 class="text-2xl font-bold text-slate-800" id="kpi-occupancy-percent">0%</h3>
+                            <span class="text-[11px] text-slate-500 font-medium"><span id="kpi-occupancy-m2">0</span> m² de 1,200 m²</span>
+                        </div>
+                        <div class="w-12 h-12 bg-brand-50 text-brand-600 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-warehouse"></i>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Total Units & Products -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-medium text-slate-400 block mb-1">Existencias Stock</span>
+                            <h3 class="text-2xl font-bold text-slate-800" id="kpi-total-units">0</h3>
+                            <span class="text-[11px] text-slate-500 font-medium"><span id="kpi-total-products">0</span> productos activos</span>
+                        </div>
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-boxes-stacked"></i>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Cartera Pendiente / Vencida -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-medium text-slate-400 block mb-1">Cartera Por Cobrar</span>
+                            <h3 class="text-2xl font-bold text-slate-800" id="kpi-pending-debt">$0</h3>
+                            <span class="text-[11px] text-rose-500 font-semibold"><span id="kpi-overdue-count">0</span> facturas vencidas</span>
+                        </div>
+                        <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                        </div>
+                    </div>
+
+                    <!-- Card 4: Total Billed -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-medium text-slate-400 block mb-1">Total Facturado</span>
+                            <h3 class="text-2xl font-bold text-slate-800" id="kpi-total-billed">$0</h3>
+                            <span class="text-[11px] text-slate-500 font-medium">Histórico emitido</span>
+                        </div>
+                        <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Chart: Ocupación por M² -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-sm font-bold text-slate-800">Distribución de Espacio (m²)</h4>
+                            <span class="text-xs text-slate-400">Metros2</span>
+                        </div>
+                        <div class="relative h-56 flex items-center justify-center">
+                            <canvas id="chartOccupancy"></canvas>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 flex justify-around text-center text-xs">
+                            <div>
+                                <span class="text-slate-400 block">Ocupado</span>
+                                <span class="font-bold text-brand-600 text-sm" id="dashboard-occupied-m2">0 m²</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-400 block">Libre</span>
+                                <span class="font-bold text-emerald-600 text-sm" id="dashboard-free-m2">0 m²</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chart: Cartera por Estado -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-sm font-bold text-slate-800">Estado de Cartera ($)</h4>
+                            <span class="text-xs text-slate-400">Facturación</span>
+                        </div>
+                        <div class="relative h-56 flex items-center justify-center">
+                            <canvas id="chartCartera"></canvas>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 flex justify-around text-center text-xs">
+                            <div><span class="text-emerald-600 font-bold block" id="summary-cartera-paid">$0</span><span class="text-slate-400">Pagado</span></div>
+                            <div><span class="text-amber-500 font-bold block" id="summary-cartera-pending">$0</span><span class="text-slate-400">Pendiente</span></div>
+                            <div><span class="text-rose-600 font-bold block" id="summary-cartera-overdue">$0</span><span class="text-slate-400">Vencido</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Top Facturación Cliente -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-sm font-bold text-slate-800">Facturación por Cliente</h4>
+                            <span class="text-xs text-slate-400">Móvil Financiero</span>
+                        </div>
+                        <div class="relative h-56">
+                            <canvas id="chartClientsBilling"></canvas>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 text-right">
+                            <button onclick="switchTab('cartera')" class="text-xs text-brand-600 font-medium hover:underline">Ver detalle de cartera &rarr;</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Alerts & Expiration Widget -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                    <h4 class="text-sm font-bold text-slate-800 mb-4 flex items-center">
+                        <i class="fa-solid fa-clock-rotate-left text-amber-500 mr-2"></i> Próximos Vencimientos de Cartera y Alertas
+                    </h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-600">
+                            <thead class="bg-slate-50 text-slate-500 uppercase font-semibold">
+                                <tr>
+                                    <th class="p-2.5">Factura #</th>
+                                    <th class="p-2.5">Cliente</th>
+                                    <th class="p-2.5">Fecha Emisión</th>
+                                    <th class="p-2.5">Vencimiento</th>
+                                    <th class="p-2.5 text-right">Monto Total</th>
+                                    <th class="p-2.5 text-center">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-expiration-table" class="divide-y divide-slate-100">
+                                <!-- Injected JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- MODULE 2: PLANO Y OCUPACIÓN DE BODEGA -->
+            <!-- ========================================== -->
+            <section id="mod-ocupacion" class="tab-content hidden space-y-6">
+                <!-- Header Controls & Totals -->
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">Plano Interactivo de Ocupación de Bodega</h3>
+                        <p class="text-xs text-slate-500">Visualización de zonas por m², asignación a terceros y control de área utilizada vs. libre.</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="openModal('modal-update-warehouse')" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1">
+                            <i class="fa-solid fa-ruler-combined"></i>
+                            <span>Medidas Bodega</span>
+                        </button>
+                        <button onclick="openModal('modal-allocate-zone')" class="px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Asignar Espacio a Cliente</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Legend and Summary Stats Bar -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center space-x-3">
+                        <div class="w-4 h-10 bg-emerald-500 rounded-sm"></div>
+                        <div>
+                            <span class="text-xs text-slate-400 block">Capacidad Total</span>
+                            <span class="text-base font-bold text-slate-800" id="map-total-capacity">1,200 m²</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center space-x-3">
+                        <div class="w-4 h-10 bg-brand-500 rounded-sm"></div>
+                        <div>
+                            <span class="text-xs text-slate-400 block">Área Ocupada</span>
+                            <span class="text-base font-bold text-brand-600" id="map-occupied-capacity">0 m²</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center space-x-3">
+                        <div class="w-4 h-10 bg-slate-300 rounded-sm"></div>
+                        <div>
+                            <span class="text-xs text-slate-400 block">Área Disponible</span>
+                            <span class="text-base font-bold text-slate-600" id="map-free-capacity">1,200 m²</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center space-x-3">
+                        <div class="w-4 h-10 bg-amber-500 rounded-sm"></div>
+                        <div>
+                            <span class="text-xs text-slate-400 block">% Ocupación General</span>
+                            <span class="text-base font-bold text-amber-600" id="map-percent">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visual Grid of Warehouse Zones -->
+                <div class="border border-slate-200 p-6 rounded-2xl shadow-xl text-white">
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-800">
+                        <div class="flex items-center space-x-3">
+                            <span class="text-xs uppercase tracking-wider font-semibold bg-slate-800 px-3 py-1 rounded-full text-brand-400 border border-slate-700">Bodega Principal - Naves A, B, C</span>
+                        </div>
+                        <div class="flex items-center space-x-4 text-xs text-slate-400">
+                            <span class="flex items-center"><span class="w-3 h-3 bg-emerald-500 rounded-full mr-1.5 inline-block"></span> Libre</span>
+                            <span class="flex items-center"><span class="w-3 h-3 bg-brand-500 rounded-full mr-1.5 inline-block"></span> En Uso</span>
+                            <span class="flex items-center"><span class="w-3 h-3 bg-rose-500 rounded-full mr-1.5 inline-block"></span> Lleno (100%)</span>
+                        </div>
+                    </div>
+
+                    <!-- Grid mapping zones -->
+                    <div id="warehouse-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <!-- Injected zones dynamically via JS -->
+                    </div>
+                </div>
+
+                <!-- Client Area Allocation Table -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                        <h4 class="font-bold text-sm text-slate-800">Resumen de Ocupación por Cliente Tenedor</h4>
+                        <span class="text-xs text-slate-500">Control de m² facturables</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100 text-slate-600 uppercase font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">Cliente / Terceiro</th>
+                                    <th class="p-3">NIT</th>
+                                    <th class="p-3">Zonas Asignadas</th>
+                                    <th class="p-3 text-right">Área Total Usada (m²)</th>
+                                    <th class="p-3 text-right">% Participación Bodega</th>
+                                    <th class="p-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="client-occupancy-table" class="divide-y divide-slate-100 text-slate-700">
+                                <!-- Injected JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- MODULE 3: INGRESOS (ENTRADAS DE MERCANCÍA) -->
+            <!-- ========================================== -->
+            <section id="mod-ingresos" class="tab-content hidden space-y-6">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">Ingreso de Mercancía a Bodega</h3>
+                        <p class="text-xs text-slate-500">Registro de recepción de stock, asignación de ubicación y m² consumidos.</p>
+                    </div>
+                    <button onclick="openModal('modal-new-inbound')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1.5">
+                        <i class="fa-solid fa-plus-circle"></i>
+                        <span>Registrar Nuevo Ingreso</span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-50">
+                        <div class="relative w-full sm:w-72">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                            <input type="text" id="search-inbound" placeholder="Buscar por remisión, cliente..." class="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        </div>
+                        <span class="text-xs text-slate-500" id="inbound-count">Mostrando 0 registros</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-700">
+                            <thead class="bg-slate-100 uppercase text-slate-600 font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">ID / Doc Ingreso</th>
+                                    <th class="p-3">Fecha & Hora</th>
+                                    <th class="p-3">Cliente Propietario</th>
+                                    <th class="p-3">Producto</th>
+                                    <th class="p-3">Ubicación / Zona</th>
+                                    <th class="p-3 text-right">Cantidad In</th>
+                                    <th class="p-3 text-right">Área Usada (m²)</th>
+                                    <th class="p-3 text-center">Usuario</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inbound-table-body" class="divide-y divide-slate-100">
+                                <!-- Injected JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- MODULE 4: SALIDAS (DESPACHO DE MERCANCÍA) -->
+            <!-- ========================================== -->
+            <section id="mod-salidas" class="tab-content hidden space-y-6">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">Despacho de Mercancía (Salidas)</h3>
+                        <p class="text-xs text-slate-500">Salida directa de stock desde ubicaciones sin módulo de pedidos previo.</p>
+                    </div>
+                    <button onclick="openModal('modal-new-outbound')" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1.5">
+                        <i class="fa-solid fa-truck-moving"></i>
+                        <span>Registrar Salida / Despacho</span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-50">
+                        <div class="relative w-full sm:w-72">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                            <input type="text" id="search-outbound" placeholder="Buscar por guia, cliente..." class="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                        </div>
+                        <span class="text-xs text-slate-500" id="outbound-count">Mostrando 0 registros</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-700">
+                            <thead class="bg-slate-100 uppercase text-slate-600 font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">ID Despacho</th>
+                                    <th class="p-3">Fecha & Hora</th>
+                                    <th class="p-3">Cliente</th>
+                                    <th class="p-3">Producto</th>
+                                    <th class="p-3">Ubicación Origen</th>
+                                    <th class="p-3 text-right">Cantidad Out</th>
+                                    <th class="p-3">Destino / Observación</th>
+                                    <th class="p-3 text-center">Operador</th>
+                                </tr>
+                            </thead>
+                            <tbody id="outbound-table-body" class="divide-y divide-slate-100">
+                                <!-- Injected JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- MODULE 5: INVENTARIO & KARDEX -->
+            <!-- ========================================== -->
+            <section id="mod-inventario" class="tab-content hidden space-y-6">
+                <!-- Sub tabs for inventory -->
+                <div class="flex space-x-3 border-b border-slate-200 pb-2">
+                    <button onclick="toggleInventorySubtab('existencias')" id="subtab-existencias" class="px-4 py-2 text-xs font-bold rounded-lg bg-slate-800 text-white shadow-sm">
+                        <i class="fa-solid fa-boxes-stacked mr-1.5"></i>Existencias por Ubicación
+                    </button>
+                    <button onclick="toggleInventorySubtab('kardex')" id="subtab-kardex" class="px-4 py-2 text-xs font-bold rounded-lg bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">
+                        <i class="fa-solid fa-list-check mr-1.5"></i>Kardex Auditor (Movimientos)
+                    </button>
+                    <button onclick="openModal('modal-adjust-stock')" class="ml-auto px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-medium shadow-sm">
+                        <i class="fa-solid fa-sliders mr-1"></i>Ajuste Manual (+/-)
+                    </button>
+                </div>
+
+                <!-- TAB 1: EXISTENCIAS -->
+                <div id="inv-subview-existencias" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3">
+                        <div class="flex items-center space-x-2">
+                            <div class="relative w-64">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                                <input type="text" id="search-inventory" onkeyup="renderInventoryTable()" placeholder="Filtrar SKU, producto, cliente..." class="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-300">
+                            </div>
+                        </div>
+                        <div class="text-xs text-slate-500">
+                            Total Referencias: <span id="total-sku-count" class="font-bold text-slate-800">0</span>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-700">
+                            <thead class="bg-slate-100 uppercase text-slate-600 font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">SKU</th>
+                                    <th class="p-3">Producto / Descripción</th>
+                                    <th class="p-3">Cliente Propietario</th>
+                                    <th class="p-3">Zona / Ubicación</th>
+                                    <th class="p-3 text-right">Existencia Actual</th>
+                                    <th class="p-3 text-right">M² Ocupados</th>
+                                    <th class="p-3 text-center">Estado Stock</th>
+                                    <th class="p-3 text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-table-body" class="divide-y divide-slate-100">
+                                <!-- Injected JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 2: KARDEX LOG -->
+                <div id="inv-subview-kardex" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hidden">
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                        <h4 class="font-bold text-sm text-slate-800">Kardex de Movimientos de Inventario</h4>
+                        <span class="text-xs text-slate-500">Trazabilidad Físico-Contable</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-700">
+                            <thead class="bg-slate-100 uppercase text-slate-600 font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">Fecha</th>
+                                    <th class="p-3">Tipo Movimiento</th>
+                                    <th class="p-3">SKU / Producto</th>
+                                    <th class="p-3">Cliente</th>
+                                    <th class="p-3 text-right">Entrada</th>
+                                    <th class="p-3 text-right">Salida</th>
+                                    <th class="p-3 text-right">Saldo Final</th>
+                                    <th class="p-3">Ubicación</th>
+                                    <th class="p-3">Detalle / Obs</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kardex-table-body" class="divide-y divide-slate-100">
+                                <!-- Injected JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- MODULE 6: CARTERA Y FACTURACIÓN -->
+            <!-- ========================================== -->
+            <section id="mod-cartera" class="tab-content hidden space-y-6">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                    <div>
+                              <h2 class="text-md font-semibold text-red-500">{Pendiente por validar}    </h2>
+                        <h3 class="text-lg font-bold text-slate-800">Módulo de Cartera y Facturación Manual</h3>
+                  
+                        
+                        <p class="text-xs text-slate-500">Registro de facturas emitidas por servicios de almacenamiento, vencimientos y estado de cuenta.</p>
+                    </div>
+                    <button onclick="openModal('modal-new-invoice')" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1.5">
+                        <i class="fa-solid fa-file-circle-plus"></i>
+                        <span>Registrar Factura</span>
+                    </button>
+                </div>
+
+                <!-- Cartera Summary Widgets -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-semibold text-emerald-800 uppercase">Facturas Pagadas</span>
+                            <h4 class="text-xl font-bold text-emerald-700" id="cartera-summary-paid">$0</h4>
+                        </div>
+                        <i class="fa-solid fa-circle-check text-2xl text-emerald-500"></i>
+                    </div>
+                    <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-semibold text-amber-800 uppercase">Facturas Pendientes</span>
+                            <h4 class="text-xl font-bold text-amber-700" id="cartera-summary-pending">$0</h4>
+                        </div>
+                        <i class="fa-solid fa-clock text-2xl text-amber-500"></i>
+                    </div>
+                    <div class="bg-rose-50 border border-rose-200 p-4 rounded-xl flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-semibold text-rose-800 uppercase">Facturas Vencidas</span>
+                            <h4 class="text-xl font-bold text-rose-700" id="cartera-summary-overdue">$0</h4>
+                        </div>
+                        <i class="fa-solid fa-triangle-exclamation text-2xl text-rose-500"></i>
+                    </div>
+                </div>
+
+                <!-- Invoices Table -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+                        <div class="flex items-center space-x-3 w-full sm:w-auto">
+                            <div class="relative w-full sm:w-64">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                                <input type="text" id="search-invoice" onkeyup="renderInvoicesTable()" placeholder="Buscar factura, cliente..." class="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-300">
+                            </div>
+                            <select id="filter-invoice-status" onchange="renderInvoicesTable()" class="py-1.5 px-3 text-xs rounded-lg border border-slate-300 bg-white">
+                                <option value="ALL">Todos los Estados</option>
+                                <option value="PENDIENTE">Pendiente</option>
+                                <option value="VENCIDA">Vencida</option>
+                                <option value="PAGADA">Pagada</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-700">
+                            <thead class="bg-slate-100 uppercase text-slate-600 font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">N° Factura</th>
+                                    <th class="p-3">Cliente</th>
+                                    <th class="p-3">Emisión</th>
+                                    <th class="p-3">Vencimiento</th>
+                                    <th class="p-3 text-right">Total Facturado</th>
+                                    <th class="p-3 text-center">Estado Cartera</th>
+                                    <th class="p-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoice-table-body" class="divide-y divide-slate-100">
+                                <!-- Injected JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- MODULE 7: MAESTROS Y CONFIGURACIÓN -->
+            <!-- ========================================== -->
+            <section id="mod-maestros" class="tab-content hidden space-y-6">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-bold text-slate-800">Configuración y Datos Maestros</h3>
+                    <p class="text-xs text-slate-500">Administre los catálogos base del WMS: Bodegas, Zonas con m², Productos y Clientes Tenedores.</p>
+                </div>
+
+                <!-- Maestros Tabs -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- CLIENTES MAESTRO -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="font-bold text-slate-800 flex items-center text-sm"><i class="fa-solid fa-users text-brand-600 mr-2"></i>Terceros / Clientes</h4>
+                                <button onclick="openModal('modal-new-client')" class="text-xs bg-brand-50 hover:bg-brand-100 text-brand-600 font-semibold px-2.5 py-1 rounded">
+                                    + Nuevo
+                                </button>
+                            </div>
+                            <ul id="master-clients-list" class="divide-y divide-slate-100 text-xs custom-scrollbar max-h-60 overflow-y-auto">
+                                <!-- Injected JS -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- PRODUCTOS MAESTRO -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="font-bold text-slate-800 flex items-center text-sm"><i class="fa-solid fa-boxes-packing text-emerald-600 mr-2"></i>Catálogo Productos</h4>
+                                <button onclick="openModal('modal-new-product')" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-semibold px-2.5 py-1 rounded">
+                                    + Nuevo
+                                </button>
+                            </div>
+                            <ul id="master-products-list" class="divide-y divide-slate-100 text-xs custom-scrollbar max-h-60 overflow-y-auto">
+                                <!-- Injected JS -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- ZONAS & BODEGAS MAESTRO -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="font-bold text-slate-800 flex items-center text-sm"><i class="fa-solid fa-layer-group text-purple-600 mr-2"></i>Zonas & Medidas (m²)</h4>
+                                <button onclick="openModal('modal-new-zone')" class="text-xs bg-purple-50 hover:bg-purple-100 text-purple-600 font-semibold px-2.5 py-1 rounded">
+                                    + Nueva Zona
+                                </button>
+                            </div>
+                            <ul id="master-zones-list" class="divide-y divide-slate-100 text-xs custom-scrollbar max-h-60 overflow-y-auto">
+                                <!-- Injected JS -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- MODULE 8: TRAZABILIDAD Y AUDITORÍA -->
+            <!-- ========================================== -->
+            <section id="mod-auditoria" class="tab-content hidden space-y-6">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-bold text-slate-800">Trazabilidad & Log de Auditoría</h3>
+                    <p class="text-xs text-slate-500">Registro inmutable de cambios en cartera, ocupación de zonas, ajustes y movimientos del sistema.</p>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                        <span class="text-xs font-semibold text-slate-600">Historial General de Eventos</span>
+                        <button onclick="clearAuditLogs()" class="text-xs text-rose-600 hover:underline">Limpiar registro</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-700">
+                            <thead class="bg-slate-100 uppercase text-slate-600 font-semibold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">Marca de Tiempo</th>
+                                    <th class="p-3">Módulo</th>
+                                    <th class="p-3">Acción / Evento</th>
+                                    <th class="p-3">Detalle</th>
+                                    <th class="p-3 text-center">Usuario Operador</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit-table-body" class="divide-y divide-slate-100">
+                                <!-- Injected JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-auto">
+            LogiMaster WMS &copy; 2026 - Control de Espacio, Inventario y Cartera Integrada
+        </footer>
+    </div> <!-- END CONTENT WRAPPER -->
+
+    <!-- ========================================== -->
+    <!-- MODALS SECTION -->
+    <!-- ========================================== -->
+
+    <!-- Modal 1: Medidas de Bodega -->
+    <div id="modal-update-warehouse" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center">
+                <i class="fa-solid fa-ruler-combined text-brand-600 mr-2"></i> Actualizar Medidas de Bodega
+            </h3>
+            <div class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Nombre de Bodega</label>
+                    <input type="text" id="input-wh-name" value="Bodega Central Principal" class="w-full p-2 border border-slate-300 rounded-lg">
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Capacidad Total en Metros Cuadrados (m²)</label>
+                    <input type="number" id="input-wh-area" value="1200" class="w-full p-2 border border-slate-300 rounded-lg">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-2 text-xs">
+                <button onclick="closeModal('modal-update-warehouse')" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-600">Cancelar</button>
+                <button onclick="saveWarehouseCapacity()" class="px-4 py-2 bg-brand-600 text-white rounded-lg font-semibold">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Asignar Espacio / Zona a Cliente -->
+    <div id="modal-allocate-zone" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center">
+                <i class="fa-solid fa-handshake text-brand-600 mr-2"></i> Asignar Zona a Cliente
+            </h3>
+            <div class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Seleccionar Zona / Ubicación</label>
+                    <select id="select-alloc-zone" class="w-full p-2 border border-slate-300 rounded-lg">
+                        <!-- Injected JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Seleccionar Cliente Tenedor</label>
+                    <select id="select-alloc-client" class="w-full p-2 border border-slate-300 rounded-lg">
+                        <!-- Injected JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Metros Cuadrados a Ocupar (m²)</label>
+                    <input type="number" id="input-alloc-m2" min="1" placeholder="Ej: 150" class="w-full p-2 border border-slate-300 rounded-lg">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-2 text-xs">
+                <button onclick="closeModal('modal-allocate-zone')" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-600">Cancelar</button>
+                <button onclick="saveZoneAllocation()" class="px-4 py-2 bg-brand-600 text-white rounded-lg font-semibold">Asignar Espacio</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3: Registrar Ingreso -->
+    <div id="modal-new-inbound" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center text-emerald-700">
+                <i class="fa-solid fa-truck-ramp-box mr-2"></i> Registrar Entrada de Mercancía
+            </h3>
+            <div class="space-y-3 text-xs">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Cliente</label>
+                        <select id="inbound-client" onchange="filterProductsByClient()" class="w-full p-2 border border-slate-300 rounded-lg"></select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Producto</label>
+                        <select id="inbound-product" class="w-full p-2 border border-slate-300 rounded-lg"></select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Ubicación / Zona Destino</label>
+                        <select id="inbound-zone" class="w-full p-2 border border-slate-300 rounded-lg"></select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Cantidad de Unidades</label>
+                        <input type="number" id="inbound-qty" min="1" value="10" class="w-full p-2 border border-slate-300 rounded-lg">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Área Adicional Consumida (m²)</label>
+                    <input type="number" id="inbound-m2" min="0" value="5" class="w-full p-2 border border-slate-300 rounded-lg">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-2 text-xs">
+                <button onclick="closeModal('modal-new-inbound')" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-600">Cancelar</button>
+                <button onclick="processInboundSubmit()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold">Procesar Ingreso</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 4: Registrar Salida / Despacho -->
+    <div id="modal-new-outbound" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center text-rose-700">
+                <i class="fa-solid fa-truck-moving mr-2"></i> Registrar Despacho / Salida
+            </h3>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Seleccionar Item de Inventario</label>
+                    <select id="outbound-stock-item" class="w-full p-2 border border-slate-300 rounded-lg"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Cantidad a Despachar</label>
+                        <input type="number" id="outbound-qty" min="1" value="1" class="w-full p-2 border border-slate-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Destino / Remisión</label>
+                        <input type="text" id="outbound-destination" placeholder="Cliente final / Ciudad" class="w-full p-2 border border-slate-300 rounded-lg">
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-2 text-xs">
+                <button onclick="closeModal('modal-new-outbound')" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-600">Cancelar</button>
+                <button onclick="processOutboundSubmit()" class="px-4 py-2 bg-rose-600 text-white rounded-lg font-semibold">Despachar Mercancía</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 5: Ajuste Manual de Inventario -->
+    <div id="modal-adjust-stock" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center text-amber-700">
+                <i class="fa-solid fa-sliders mr-2"></i> Ajuste Físico de Inventario
+            </h3>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Registro de Stock</label>
+                    <select id="adjust-stock-item" class="w-full p-2 border border-slate-300 rounded-lg"></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Tipo de Ajuste</label>
+                        <select id="adjust-type" class="w-full p-2 border border-slate-300 rounded-lg">
+                            <option value="POS">Positivo (+ Ingreso)</option>
+                            <option value="NEG">Negativo (- Pérdida/Mermas)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Cantidad</label>
+                        <input type="number" id="adjust-qty" min="1" value="1" class="w-full p-2 border border-slate-300 rounded-lg">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Motivo / Justificación</label>
+                    <input type="text" id="adjust-reason" placeholder="Auditoría / Conteo cíclico / Rotura" class="w-full p-2 border border-slate-300 rounded-lg">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-2 text-xs">
+                <button onclick="closeModal('modal-adjust-stock')" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-600">Cancelar</button>
+                <button onclick="processStockAdjustment()" class="px-4 py-2 bg-amber-600 text-white rounded-lg font-semibold">Guardar Ajuste</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 6: Nueva Factura Cartera -->
+    <div id="modal-new-invoice" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center text-brand-600">
+                <i class="fa-solid fa-file-invoice-dollar mr-2"></i> Registrar Nueva Factura
+            </h3>
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Cliente</label>
+                    <select id="invoice-client" class="w-full p-2 border border-slate-300 rounded-lg"></select>
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Número Factura / Doc</label>
+                    <input type="text" id="invoice-number" placeholder="Ej: FAC-9082" class="w-full p-2 border border-slate-300 rounded-lg">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Fecha Emisión</label>
+                        <input type="date" id="invoice-issue-date" class="w-full p-2 border border-slate-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Fecha Vencimiento</label>
+                        <input type="date" id="invoice-due-date" class="w-full p-2 border border-slate-300 rounded-lg">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Valor Total ($ USD/COP)</label>
+                    <input type="number" id="invoice-total" min="1" placeholder="Ej: 4500" class="w-full p-2 border border-slate-300 rounded-lg">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-2 text-xs">
+                <button onclick="closeModal('modal-new-invoice')" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-600">Cancelar</button>
+                <button onclick="saveNewInvoice()" class="px-4 py-2 bg-brand-600 text-white rounded-lg font-semibold">Registrar Factura</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Maestros (Cliente, Producto, Zona) -->
+    <div id="modal-new-client" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl relative text-xs">
+            <h3 class="font-bold text-sm text-slate-800 mb-3">Nuevo Cliente Tenedor</h3>
+            <input type="text" id="new-client-nit" placeholder="NIT / RUT" class="w-full p-2 mb-2 border rounded">
+            <input type="text" id="new-client-name" placeholder="Nombre Comercial" class="w-full p-2 mb-2 border rounded">
+            <div class="flex justify-end space-x-2 mt-4">
+                <button onclick="closeModal('modal-new-client')" class="px-3 py-1.5 border rounded">Cancelar</button>
+                <button onclick="saveNewClient()" class="px-3 py-1.5 bg-brand-600 text-white rounded font-bold">Crear</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-new-product" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl relative text-xs">
+            <h3 class="font-bold text-sm text-slate-800 mb-3">Nuevo Producto</h3>
+            <input type="text" id="new-product-sku" placeholder="SKU (ej: PROD-101)" class="w-full p-2 mb-2 border rounded">
+            <input type="text" id="new-product-name" placeholder="Nombre / Descripción" class="w-full p-2 mb-2 border rounded">
+            <select id="new-product-client" class="w-full p-2 mb-2 border rounded"></select>
+            <div class="flex justify-end space-x-2 mt-4">
+                <button onclick="closeModal('modal-new-product')" class="px-3 py-1.5 border rounded">Cancelar</button>
+                <button onclick="saveNewProduct()" class="px-3 py-1.5 bg-emerald-600 text-white rounded font-bold">Crear</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-new-zone" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl relative text-xs">
+            <h3 class="font-bold text-sm text-slate-800 mb-3">Nueva Zona / Nave</h3>
+            <input type="text" id="new-zone-code" placeholder="Código Zona (ej: Zona D)" class="w-full p-2 mb-2 border rounded">
+            <input type="number" id="new-zone-m2" placeholder="Área Máxima en m²" class="w-full p-2 mb-2 border rounded">
+            <div class="flex justify-end space-x-2 mt-4">
+                <button onclick="closeModal('modal-new-zone')" class="px-3 py-1.5 border rounded">Cancelar</button>
+                <button onclick="saveNewZone()" class="px-3 py-1.5 bg-purple-600 text-white rounded font-bold">Crear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2"></div>
+
+    <!-- ========================================== -->
+    <!-- JAVASCRIPT LOGIC & STATE ENGINE -->
+    <!-- ========================================== -->
+    <script>
+        const state = {
+            warehouse: {
+                id: 'WH-01',
+                name: 'Bodega Principal LogiMaster',
+                totalAreaM2: 1200
+            },
+            clients: [
+                { id: 'CLI-01', nit: '900.123.456-1', name: 'Logística Alfa S.A.S.' },
+                { id: 'CLI-02', nit: '811.987.654-2', name: 'Comercializadora Sur' },
+                { id: 'CLI-03', nit: '901.555.333-8', name: 'Importaciones Globales' }
+            ],
+            zones: [
+                { id: 'Z-A1', code: 'Zona A1 (Carga Fría)', maxM2: 250, occupiedM2: 180, clientId: 'CLI-01' },
+                { id: 'Z-A2', code: 'Zona A2 (Racks Altos)', maxM2: 300, occupiedM2: 220, clientId: 'CLI-02' },
+                { id: 'Z-B1', code: 'Zona B1 (Estantería)', maxM2: 250, occupiedM2: 120, clientId: 'CLI-03' },
+                { id: 'Z-B2', code: 'Zona B2 (Piso General)', maxM2: 200, occupiedM2: 0, clientId: null },
+                { id: 'Z-C1', code: 'Zona C1 (Peligrosos)', maxM2: 200, occupiedM2: 80, clientId: 'CLI-01' }
+            ],
+            products: [
+                { id: 'P-01', sku: 'SKU-PAL-001', name: 'Pallets Madera Estándar', clientId: 'CLI-01' },
+                { id: 'P-02', sku: 'SKU-BOX-500', name: 'Cajas Cartón Corrugado N5', clientId: 'CLI-02' },
+                { id: 'P-03', sku: 'SKU-ELE-99', name: 'Componentes Electrónicos', clientId: 'CLI-03' },
+                { id: 'P-04', sku: 'SKU-QUI-12', name: 'Contenedores Químicos 20L', clientId: 'CLI-01' }
+            ],
+            stock: [
+                { id: 'STK-101', productId: 'P-01', zoneId: 'Z-A1', clientId: 'CLI-01', quantity: 450, m2Used: 100 },
+                { id: 'STK-102', productId: 'P-02', zoneId: 'Z-A2', clientId: 'CLI-02', quantity: 1200, m2Used: 150 },
+                { id: 'STK-103', productId: 'P-03', zoneId: 'Z-B1', clientId: 'CLI-03', quantity: 300, m2Used: 80 },
+                { id: 'STK-104', productId: 'P-04', zoneId: 'Z-C1', clientId: 'CLI-01', quantity: 90, m2Used: 50 }
+            ],
+            inbounds: [
+                { id: 'ING-2026-001', timestamp: '2026-09-01 08:30', clientId: 'CLI-01', productId: 'P-01', zoneId: 'Z-A1', qty: 500, m2: 100, user: 'Juan Silva' },
+                { id: 'ING-2026-002', timestamp: '2026-09-05 14:15', clientId: 'CLI-02', productId: 'P-02', zoneId: 'Z-A2', qty: 1200, m2: 150, user: 'Pedro Gomez' }
+            ],
+            outbounds: [
+                { id: 'SAL-2026-001', timestamp: '2026-09-08 10:00', clientId: 'CLI-01', productId: 'P-01', zoneId: 'Z-A1', qty: 50, destination: 'Despacho Cliente Alfa Medellín', user: 'Juan Silva' }
+            ],
+            invoices: [
+                { id: 'INV-101', number: 'FAC-2026-01', clientId: 'CLI-01', issueDate: '2026-08-01', dueDate: '2026-08-31', total: 4500, status: 'VENCIDA' },
+                { id: 'INV-102', number: 'FAC-2026-02', clientId: 'CLI-02', issueDate: '2026-09-01', dueDate: '2026-09-25', total: 3200, status: 'PENDIENTE' },
+                { id: 'INV-103', number: 'FAC-2026-03', clientId: 'CLI-03', issueDate: '2026-08-15', dueDate: '2026-09-15', total: 1800, status: 'PENDIENTE' },
+                { id: 'INV-104', number: 'FAC-2026-04', clientId: 'CLI-01', issueDate: '2026-07-10', dueDate: '2026-08-10', total: 5000, status: 'PAGADA' }
+            ],
+            kardex: [
+                { timestamp: '2026-09-01 08:30', type: 'ENTRADA', sku: 'SKU-PAL-001', productName: 'Pallets Madera Estándar', clientName: 'Logística Alfa S.A.S.', in: 500, out: 0, balance: 500, zone: 'Zona A1 (Carga Fría)', details: 'Ingreso Inicial Remisión #001' },
+                { timestamp: '2026-09-08 10:00', type: 'SALIDA', sku: 'SKU-PAL-001', productName: 'Pallets Madera Estándar', clientName: 'Logística Alfa S.A.S.', in: 0, out: 50, balance: 450, zone: 'Zona A1 (Carga Fría)', details: 'Despacho Carga Medellín' }
+            ],
+            auditLogs: [
+                { timestamp: '2026-09-01 08:30', module: 'INGRESOS', action: 'Ingreso de mercancía', detail: 'Ingreso 500 unidades de SKU-PAL-001 en Zona A1', user: 'Juan Silva' },
+                { timestamp: '2026-09-08 10:00', module: 'SALIDAS', action: 'Despacho de mercancía', detail: 'Salida 50 unidades de SKU-PAL-001 de Zona A1', user: 'Juan Silva' }
+            ]
+        };
+
+        let chartOccupancyInstance = null;
+        let chartCarteraInstance = null;
+        let chartClientsInstance = null;
+
+        const moduleTitles = {
+            'dashboard': 'KPIs & Indicadores',
+            'ocupacion': 'Plano & Ocupación de Bodega',
+            'ingresos': 'Ingreso de Mercancía',
+            'salidas': 'Despacho de Salidas',
+            'inventario': 'Gestión de Inventario & Kardex',
+            'cartera': 'Cartera & Facturación',
+            'maestros': 'Maestros y Configuración',
+            'auditoria': 'Log de Auditoría & Trazabilidad'
+        };
+
+        function setSafeText(id, text) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = text;
+        }
+
+        window.onload = function() {
+            // Set default date inputs to today
+            const today = new Date().toISOString().split('T')[0];
+            const issueInput = document.getElementById('invoice-issue-date');
+            if (issueInput) issueInput.value = today;
+
+            refreshAllViews();
+        };
+
+        function toggleSidebar(open) {
+            const sidebar = document.getElementById('main-sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            if (sidebar && backdrop) {
+                if (open) {
+                    sidebar.classList.remove('-translate-x-full');
+                    backdrop.classList.remove('hidden');
+                } else {
+                    sidebar.classList.add('-translate-x-full');
+                    backdrop.classList.add('hidden');
+                }
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.classList.remove('bg-brand-600', 'text-white', 'shadow-md', 'font-bold');
+                el.classList.add('text-slate-300');
+            });
+
+            const targetContent = document.getElementById(`mod-${tabId}`);
+            if (targetContent) {
+                targetContent.classList.remove('hidden');
+            }
+
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if (activeNav) {
+                activeNav.classList.remove('text-slate-300');
+                activeNav.classList.add('bg-brand-600', 'text-white', 'shadow-md', 'font-bold');
+            }
+
+            // Update header title
+            const headerTitle = document.getElementById('current-module-title');
+            if (headerTitle && moduleTitles[tabId]) {
+                headerTitle.innerText = moduleTitles[tabId];
+            }
+
+            // Close mobile sidebar on selection
+            toggleSidebar(false);
+
+            // Re-render charts on dashboard view
+            if (tabId === 'dashboard') {
+                renderDashboardCharts();
+            }
+        }
+
+        function refreshAllViews() {
+            renderKPIs();
+            renderWarehouseMap();
+            renderInboundTable();
+            renderOutboundTable();
+            renderInventoryTable();
+            renderKardexTable();
+            renderInvoicesTable();
+            renderMasterLists();
+            renderAuditLogs();
+            populateModalDropdowns();
+            renderDashboardCharts();
+        }
+
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-slate-800';
+            toast.className = `${bgClass} text-white px-4 py-3 rounded-xl shadow-lg text-xs flex items-center space-x-2 transition-all duration-300 transform translate-y-2 opacity-0`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i><span>${msg}</span>`;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function logAudit(module, action, detail, user = 'Juan Silva') {
+            const timestamp = new Date().toLocaleString();
+            state.auditLogs.unshift({ timestamp, module, action, detail, user });
+            renderAuditLogs();
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function openModal(id) {
+            populateModalDropdowns();
+            const modal = document.getElementById(id);
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function renderKPIs() {
+            // Calculate Warehouse Occupancy
+            const totalOccupiedM2 = state.zones.reduce((sum, z) => sum + z.occupiedM2, 0);
+            const totalCapacity = state.warehouse.totalAreaM2;
+            const occPercent = Math.round((totalOccupiedM2 / totalCapacity) * 100) || 0;
+
+            setSafeText('kpi-occupancy-percent', `${occPercent}%`);
+            setSafeText('kpi-occupancy-m2', totalOccupiedM2);
+            setSafeText('dashboard-occupied-m2', `${totalOccupiedM2} m²`);
+            setSafeText('dashboard-free-m2', `${Math.max(0, totalCapacity - totalOccupiedM2)} m²`);
+            setSafeText('topbar-occupancy-badge', `${occPercent}%`);
+
+            // Calculate Stock Totals
+            const totalUnits = state.stock.reduce((sum, s) => sum + s.quantity, 0);
+            setSafeText('kpi-total-units', totalUnits.toLocaleString());
+            setSafeText('kpi-total-products', state.products.length);
+
+            // Calculate Cartera Stats
+            let pendingTotal = 0;
+            let overdueTotal = 0;
+            let paidTotal = 0;
+            let overdueCount = 0;
+
+            state.invoices.forEach(inv => {
+                const total = Number(inv.total);
+                if (inv.status === 'PAGADA') {
+                    paidTotal += total;
+                } else if (inv.status === 'PENDIENTE') {
+                    pendingTotal += total;
+                } else if (inv.status === 'VENCIDA') {
+                    overdueTotal += total;
+                    overdueCount++;
+                }
+            });
+
+            setSafeText('kpi-pending-debt', `$${(pendingTotal + overdueTotal).toLocaleString()}`);
+            setSafeText('kpi-overdue-count', overdueCount);
+            setSafeText('kpi-total-billed', `$${(paidTotal + pendingTotal + overdueTotal).toLocaleString()}`);
+
+            setSafeText('summary-cartera-paid', `$${paidTotal.toLocaleString()}`);
+            setSafeText('summary-cartera-pending', `$${pendingTotal.toLocaleString()}`);
+            setSafeText('summary-cartera-overdue', `$${overdueTotal.toLocaleString()}`);
+
+            setSafeText('cartera-summary-paid', `$${paidTotal.toLocaleString()}`);
+            setSafeText('cartera-summary-pending', `$${pendingTotal.toLocaleString()}`);
+            setSafeText('cartera-summary-overdue', `$${overdueTotal.toLocaleString()}`);
+
+            // Dashboard Expiration table
+            const expTable = document.getElementById('dashboard-expiration-table');
+            if (expTable) {
+                expTable.innerHTML = '';
+                const sortedInvoices = [...state.invoices].sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)).slice(0, 5);
+                
+                sortedInvoices.forEach(inv => {
+                    const client = state.clients.find(c => c.id === inv.clientId)?.name || 'N/A';
+                    const badgeClass = inv.status === 'PAGADA' ? 'bg-emerald-100 text-emerald-700' : (inv.status === 'VENCIDA' ? 'bg-rose-100 text-rose-700 font-bold animate-pulse' : 'bg-amber-100 text-amber-700');
+
+                    expTable.innerHTML += `
+                        <tr>
+                            <td class="p-2.5 font-bold">${inv.number}</td>
+                            <td class="p-2.5">${client}</td>
+                            <td class="p-2.5">${inv.issueDate}</td>
+                            <td class="p-2.5">${inv.dueDate}</td>
+                            <td class="p-2.5 text-right font-semibold">$${Number(inv.total).toLocaleString()}</td>
+                            <td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] ${badgeClass}">${inv.status}</span></td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        function renderDashboardCharts() {
+            const totalOccupiedM2 = state.zones.reduce((sum, z) => sum + z.occupiedM2, 0);
+            const freeM2 = Math.max(0, state.warehouse.totalAreaM2 - totalOccupiedM2);
+
+            // Chart 1: Occupancy Donut
+            const canvas1 = document.getElementById('chartOccupancy');
+            if (canvas1) {
+                const ctx1 = canvas1.getContext('2d');
+                if (chartOccupancyInstance) chartOccupancyInstance.destroy();
+                chartOccupancyInstance = new Chart(ctx1, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Ocupado (m²)', 'Disponible (m²)'],
+                        datasets: [{
+                            data: [totalOccupiedM2, freeM2],
+                            backgroundColor: ['#0284c7', '#10b981'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+
+            // Chart 2: Cartera Breakdown
+            let paid = 0, pending = 0, overdue = 0;
+            state.invoices.forEach(i => {
+                if (i.status === 'PAGADA') paid += Number(i.total);
+                if (i.status === 'PENDIENTE') pending += Number(i.total);
+                if (i.status === 'VENCIDA') overdue += Number(i.total);
+            });
+
+            const canvas2 = document.getElementById('chartCartera');
+            if (canvas2) {
+                const ctx2 = canvas2.getContext('2d');
+                if (chartCarteraInstance) chartCarteraInstance.destroy();
+                chartCarteraInstance = new Chart(ctx2, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Pagado', 'Pendiente', 'Vencido'],
+                        datasets: [{
+                            data: [paid, pending, overdue],
+                            backgroundColor: ['#10b981', '#f59e0b', '#f43f5e'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+
+            // Chart 3: Client Billing Bar
+            const clientTotals = {};
+            state.invoices.forEach(i => {
+                const clientName = state.clients.find(c => c.id === i.clientId)?.name || 'N/A';
+                clientTotals[clientName] = (clientTotals[clientName] || 0) + Number(i.total);
+            });
+
+            const canvas3 = document.getElementById('chartClientsBilling');
+            if (canvas3) {
+                const ctx3 = canvas3.getContext('2d');
+                if (chartClientsInstance) chartClientsInstance.destroy();
+                chartClientsInstance = new Chart(ctx3, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(clientTotals),
+                        datasets: [{
+                            label: 'Facturación ($)',
+                            data: Object.values(clientTotals),
+                            backgroundColor: '#6366f1',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
+        }
+
+        function renderWarehouseMap() {
+            const grid = document.getElementById('warehouse-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const totalOccupied = state.zones.reduce((acc, z) => acc + z.occupiedM2, 0);
+            const totalCapacity = state.warehouse.totalAreaM2;
+            const globalPercent = Math.round((totalOccupied / totalCapacity) * 100) || 0;
+
+            setSafeText('map-total-capacity', `${totalCapacity} m²`);
+            setSafeText('map-occupied-capacity', `${totalOccupied} m²`);
+            setSafeText('map-free-capacity', `${Math.max(0, totalCapacity - totalOccupied)} m²`);
+            setSafeText('map-percent', `${globalPercent}%`);
+
+            state.zones.forEach(zone => {
+                const client = state.clients.find(c => c.id === zone.clientId);
+                const percent = Math.min(100, Math.round((zone.occupiedM2 / zone.maxM2) * 100));
+                
+                let statusBadge = `<span class="bg-white text-gray-800 text-[10px] px-2 py-0.5 rounded-full">Libre</span>`;
+                let borderColor = 'border-slate-700';
+                let progressBg = 'bg-emerald-500';
+
+                if (percent > 0 && percent < 100) {
+                    statusBadge = `<span class="bg-brand-500 text-white text-[10px] px-2 py-0.5 rounded-full">Ocupado ${percent}%</span>`;
+                    borderColor = 'border-brand-500';
+                    progressBg = 'bg-brand-500';
+                } else if (percent >= 100) {
+                    statusBadge = `<span class="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full">Lleno (100%)</span>`;
+                    borderColor = 'border-rose-500';
+                    progressBg = 'bg-rose-500';
+                }
+
+                grid.innerHTML += `
+                    <div class="bg-black rounded-xl p-4 border ${borderColor} zone-box flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-2">
+                                <h5 class="font-bold text-sm text-white">${zone.code}</h5>
+                                ${statusBadge}
+                            </div>
+                            <p class="text-xs text-slate-400 mb-1"><i class="fa-solid fa-user text-slate-500 mr-1"></i> ${client ? client.name : 'Sin asignar (Bodega General)'}</p>
+                            <div class="text-xs text-slate-300 font-semibold mb-3">
+                                ${zone.occupiedM2} m² / ${zone.maxM2} m²
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="w-full bg-slate-700 h-2 rounded-full overflow-hidden mb-3">
+                                <div class="${progressBg} h-full" style="width: ${percent}%"></div>
+                            </div>
+                            <div class="flex justify-between items-center text-[11px] pt-2 border-t border-slate-700 text-slate-400">
+                                <span>Disponibles: <strong class="text-white">${zone.maxM2 - zone.occupiedM2} m²</strong></span>
+                                <button onclick="deallocateZone('${zone.id}')" class="text-rose-400 hover:underline">Liberar</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Render Client Occupancy Table
+            const clientTable = document.getElementById('client-occupancy-table');
+            if (clientTable) {
+                clientTable.innerHTML = '';
+
+                state.clients.forEach(cli => {
+                    const clientZones = state.zones.filter(z => z.clientId === cli.id);
+                    const totalM2Used = clientZones.reduce((sum, z) => sum + z.occupiedM2, 0);
+                    const sharePercent = ((totalM2Used / totalCapacity) * 100).toFixed(1);
+                    const zoneCodes = clientZones.map(z => z.code).join(', ') || 'Sin zonas asignadas';
+
+                    clientTable.innerHTML += `
+                        <tr>
+                            <td class="p-3 font-semibold text-slate-800">${cli.name}</td>
+                            <td class="p-3 text-slate-500">${cli.nit}</td>
+                            <td class="p-3 text-slate-600">${zoneCodes}</td>
+                            <td class="p-3 text-right font-bold text-brand-600">${totalM2Used} m²</td>
+                            <td class="p-3 text-right font-semibold">${sharePercent}%</td>
+                            <td class="p-3 text-center">
+                                <button onclick="openModal('modal-allocate-zone')" class="text-brand-600 hover:underline">Gestionar Espacio</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        function renderInboundTable() {
+            const tbody = document.getElementById('inbound-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            setSafeText('inbound-count', `Mostrando ${state.inbounds.length} ingresos`);
+
+            state.inbounds.forEach(ing => {
+                const client = state.clients.find(c => c.id === ing.clientId)?.name || 'N/A';
+                const product = state.products.find(p => p.id === ing.productId)?.name || 'N/A';
+                const zone = state.zones.find(z => z.id === ing.zoneId)?.code || 'N/A';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-3 font-bold text-slate-800">${ing.id}</td>
+                        <td class="p-3 text-slate-500">${ing.timestamp}</td>
+                        <td class="p-3 font-medium">${client}</td>
+                        <td class="p-3">${product}</td>
+                        <td class="p-3"><span class="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">${zone}</span></td>
+                        <td class="p-3 text-right font-bold text-emerald-600">+${ing.qty}</td>
+                        <td class="p-3 text-right font-semibold">${ing.m2} m²</td>
+                        <td class="p-3 text-center text-slate-500">${ing.user}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderOutboundTable() {
+            const tbody = document.getElementById('outbound-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            setSafeText('outbound-count', `Mostrando ${state.outbounds.length} despachos`);
+
+            state.outbounds.forEach(out => {
+                const client = state.clients.find(c => c.id === out.clientId)?.name || 'N/A';
+                const product = state.products.find(p => p.id === out.productId)?.name || 'N/A';
+                const zone = state.zones.find(z => z.id === out.zoneId)?.code || 'N/A';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-3 font-bold text-slate-800">${out.id}</td>
+                        <td class="p-3 text-slate-500">${out.timestamp}</td>
+                        <td class="p-3 font-medium">${client}</td>
+                        <td class="p-3">${product}</td>
+                        <td class="p-3"><span class="bg-slate-100 px-2 py-0.5 rounded border border-slate-200">${zone}</span></td>
+                        <td class="p-3 text-right font-bold text-rose-600">-${out.qty}</td>
+                        <td class="p-3 text-slate-600">${out.destination}</td>
+                        <td class="p-3 text-center text-slate-500">${out.user}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderInventoryTable() {
+            const tbody = document.getElementById('inventory-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            const search = document.getElementById('search-inventory')?.value.toLowerCase() || '';
+
+            const filteredStock = state.stock.filter(stk => {
+                const prod = state.products.find(p => p.id === stk.productId);
+                const client = state.clients.find(c => c.id === stk.clientId);
+                return (prod?.name.toLowerCase().includes(search) || prod?.sku.toLowerCase().includes(search) || client?.name.toLowerCase().includes(search));
+            });
+
+            setSafeText('total-sku-count', filteredStock.length);
+
+            filteredStock.forEach(stk => {
+                const prod = state.products.find(p => p.id === stk.productId);
+                const client = state.clients.find(c => c.id === stk.clientId);
+                const zone = state.zones.find(z => z.id === stk.zoneId);
+
+                const statusBadge = stk.quantity < 50 ? '<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">Stock Bajo</span>' : '<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">Normal</span>';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-3 font-bold text-slate-800">${prod ? prod.sku : 'N/A'}</td>
+                        <td class="p-3 font-medium">${prod ? prod.name : 'N/A'}</td>
+                        <td class="p-3 text-slate-600">${client ? client.name : 'N/A'}</td>
+                        <td class="p-3"><span class="bg-slate-100 px-2 py-0.5 rounded text-slate-700 border border-slate-200">${zone ? zone.code : 'N/A'}</span></td>
+                        <td class="p-3 text-right font-extrabold text-slate-800">${stk.quantity.toLocaleString()}</td>
+                        <td class="p-3 text-right font-semibold text-brand-600">${stk.m2Used} m²</td>
+                        <td class="p-3 text-center">${statusBadge}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="openModal('modal-adjust-stock')" class="text-amber-600 hover:underline">Ajustar</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderKardexTable() {
+            const tbody = document.getElementById('kardex-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            state.kardex.forEach(k => {
+                const badgeClass = k.type === 'ENTRADA' ? 'bg-emerald-100 text-emerald-700' : (k.type === 'SALIDA' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700');
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-3 text-slate-500">${k.timestamp}</td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${badgeClass}">${k.type}</span></td>
+                        <td class="p-3 font-medium">${k.sku} - ${k.productName}</td>
+                        <td class="p-3 text-slate-600">${k.clientName}</td>
+                        <td class="p-3 text-right font-bold text-emerald-600">${k.in > 0 ? '+' + k.in : '-'}</td>
+                        <td class="p-3 text-right font-bold text-rose-600">${k.out > 0 ? '-' + k.out : '-'}</td>
+                        <td class="p-3 text-right font-extrabold text-slate-800">${k.balance}</td>
+                        <td class="p-3 text-slate-500">${k.zone}</td>
+                        <td class="p-3 text-slate-500 text-[11px]">${k.details}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderInvoicesTable() {
+            const tbody = document.getElementById('invoice-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const search = document.getElementById('search-invoice')?.value.toLowerCase() || '';
+            const filterStatus = document.getElementById('filter-invoice-status')?.value || 'ALL';
+
+            const filtered = state.invoices.filter(inv => {
+                const client = state.clients.find(c => c.id === inv.clientId)?.name.toLowerCase() || '';
+                const matchSearch = inv.number.toLowerCase().includes(search) || client.includes(search);
+                const matchStatus = filterStatus === 'ALL' || inv.status === filterStatus;
+                return matchSearch && matchStatus;
+            });
+
+            filtered.forEach(inv => {
+                const client = state.clients.find(c => c.id === inv.clientId)?.name || 'N/A';
+                const badgeClass = inv.status === 'PAGADA' ? 'bg-emerald-100 text-emerald-700' : (inv.status === 'VENCIDA' ? 'bg-rose-100 text-rose-700 font-bold' : 'bg-amber-100 text-amber-700');
+
+                let actionBtn = '';
+                if (inv.status !== 'PAGADA') {
+                    actionBtn = `<button onclick="markInvoicePaid('${inv.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold">Marcar Pagada</button>`;
+                } else {
+                    actionBtn = `<span class="text-xs text-slate-400">Pagada</span>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-3 font-bold text-slate-800">${inv.number}</td>
+                        <td class="p-3 font-medium">${client}</td>
+                        <td class="p-3 text-slate-500">${inv.issueDate}</td>
+                        <td class="p-3 text-slate-500">${inv.dueDate}</td>
+                        <td class="p-3 text-right font-extrabold text-slate-800">$${Number(inv.total).toLocaleString()}</td>
+                        <td class="p-3 text-center"><span class="px-2.5 py-1 rounded-full text-[11px] ${badgeClass}">${inv.status}</span></td>
+                        <td class="p-3 text-center">${actionBtn}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function markInvoicePaid(invId) {
+            const inv = state.invoices.find(i => i.id === invId);
+            if (inv) {
+                inv.status = 'PAGADA';
+                logAudit('CARTERA', 'Pago de factura', `Factura ${inv.number} fue marcada como PAGADA`);
+                showToast(`Factura ${inv.number} registrada como pagada`, 'success');
+                refreshAllViews();
+            }
+        }
+
+        function renderMasterLists() {
+            // Clients
+            const cList = document.getElementById('master-clients-list');
+            if (cList) {
+                cList.innerHTML = '';
+                state.clients.forEach(c => {
+                    cList.innerHTML += `<li class="py-2 border-b border-slate-100 flex justify-between"><div><strong class="block">${c.name}</strong><span class="text-slate-400 text-[10px]">${c.nit}</span></div></li>`;
+                });
+            }
+
+            // Products
+            const pList = document.getElementById('master-products-list');
+            if (pList) {
+                pList.innerHTML = '';
+                state.products.forEach(p => {
+                    const owner = state.clients.find(c => c.id === p.clientId)?.name || 'N/A';
+                    pList.innerHTML += `<li class="py-2 border-b border-slate-100 flex justify-between"><div><strong class="block">${p.sku}</strong><span class="text-slate-500">${p.name} (${owner})</span></div></li>`;
+                });
+            }
+
+            // Zones
+            const zList = document.getElementById('master-zones-list');
+            if (zList) {
+                zList.innerHTML = '';
+                state.zones.forEach(z => {
+                    zList.innerHTML += `<li class="py-2 border-b border-slate-100 flex justify-between"><div><strong class="block">${z.code}</strong><span class="text-slate-400 text-[10px]">Capacidad Max: ${z.maxM2} m²</span></div></li>`;
+                });
+            }
+        }
+
+        function renderAuditLogs() {
+            const tbody = document.getElementById('audit-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            state.auditLogs.forEach(log => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-3 text-slate-500 font-mono">${log.timestamp}</td>
+                        <td class="p-3"><span class="bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-bold border border-slate-200">${log.module}</span></td>
+                        <td class="p-3 font-medium text-slate-800">${log.action}</td>
+                        <td class="p-3 text-slate-600">${log.detail}</td>
+                        <td class="p-3 text-center text-slate-500">${log.user}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function clearAuditLogs() {
+            state.auditLogs = [];
+            renderAuditLogs();
+            showToast('Logs de auditoría limpiados', 'info');
+        }
+
+        function toggleInventorySubtab(sub) {
+            const subViewExistencias = document.getElementById('inv-subview-existencias');
+            const subViewKardex = document.getElementById('inv-subview-kardex');
+            const subtabExistencias = document.getElementById('subtab-existencias');
+            const subtabKardex = document.getElementById('subtab-kardex');
+
+            if (sub === 'existencias') {
+                if (subViewExistencias) subViewExistencias.classList.remove('hidden');
+                if (subViewKardex) subViewKardex.classList.add('hidden');
+                if (subtabExistencias) subtabExistencias.className = 'px-4 py-2 text-xs font-bold rounded-lg bg-slate-800 text-white shadow-sm';
+                if (subtabKardex) subtabKardex.className = 'px-4 py-2 text-xs font-bold rounded-lg bg-white text-slate-600 hover:bg-slate-100 border border-slate-200';
+            } else {
+                if (subViewExistencias) subViewExistencias.classList.add('hidden');
+                if (subViewKardex) subViewKardex.classList.remove('hidden');
+                if (subtabKardex) subtabKardex.className = 'px-4 py-2 text-xs font-bold rounded-lg bg-slate-800 text-white shadow-sm';
+                if (subtabExistencias) subtabExistencias.className = 'px-4 py-2 text-xs font-bold rounded-lg bg-white text-slate-600 hover:bg-slate-100 border border-slate-200';
+            }
+        }
+
+        function populateModalDropdowns() {
+            // Clients dropdowns
+            const clientOpts = state.clients.map(c => `<option value="${c.id}">${c.name} (${c.nit})</option>`).join('');
+            ['select-alloc-client', 'inbound-client', 'invoice-client', 'new-product-client'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = clientOpts;
+            });
+
+            // Zones dropdowns
+            const zoneOpts = state.zones.map(z => `<option value="${z.id}">${z.code} (Máx: ${z.maxM2} m²)</option>`).join('');
+            ['select-alloc-zone', 'inbound-zone'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = zoneOpts;
+            });
+
+            filterProductsByClient();
+
+            // Stock Items for Outbound & Adjust
+            const stockOpts = state.stock.map(s => {
+                const prod = state.products.find(p => p.id === s.productId);
+                const zone = state.zones.find(z => z.id === s.zoneId);
+                return `<option value="${s.id}">${prod ? prod.sku + ' - ' + prod.name : 'N/A'} (Cant: ${s.quantity} en ${zone ? zone.code : ''})</option>`;
+            }).join('');
+
+            ['outbound-stock-item', 'adjust-stock-item'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = stockOpts;
+            });
+        }
+
+        function filterProductsByClient() {
+            const clientId = document.getElementById('inbound-client')?.value;
+            const filteredProds = state.products.filter(p => p.clientId === clientId);
+            const prodOpts = filteredProds.map(p => `<option value="${p.id}">${p.sku} - ${p.name}</option>`).join('');
+            const el = document.getElementById('inbound-product');
+            if (el) el.innerHTML = prodOpts || '<option value="">Sin productos registrados</option>';
+        }
+
+        function saveWarehouseCapacity() {
+            const areaInput = document.getElementById('input-wh-area');
+            const nameInput = document.getElementById('input-wh-name');
+            if (!areaInput || !nameInput) return;
+
+            const newArea = Number(areaInput.value);
+            const newName = nameInput.value;
+            if (newArea <= 0) return showToast('Ingrese un área válida', 'error');
+
+            state.warehouse.totalAreaM2 = newArea;
+            state.warehouse.name = newName;
+            logAudit('OCUPACION', 'Cambio Capacidad Bodega', `Área ajustada a ${newArea} m²`);
+            showToast('Medidas de bodega actualizadas', 'success');
+            closeModal('modal-update-warehouse');
+            refreshAllViews();
+        }
+
+        function saveZoneAllocation() {
+            const zoneId = document.getElementById('select-alloc-zone')?.value;
+            const clientId = document.getElementById('select-alloc-client')?.value;
+            const m2 = Number(document.getElementById('input-alloc-m2')?.value);
+
+            const zone = state.zones.find(z => z.id === zoneId);
+            const client = state.clients.find(c => c.id === clientId);
+
+            if (!zone || !client || m2 <= 0) return showToast('Por favor complete todos los campos', 'error');
+
+            zone.clientId = clientId;
+            zone.occupiedM2 = m2;
+
+            logAudit('OCUPACION', 'Asignación de Espacio', `Se asignaron ${m2} m² de ${zone.code} al cliente ${client.name}`);
+            showToast('Espacio asignado exitosamente', 'success');
+            closeModal('modal-allocate-zone');
+            refreshAllViews();
+        }
+
+        function deallocateZone(zoneId) {
+            const zone = state.zones.find(z => z.id === zoneId);
+            if (zone) {
+                zone.clientId = null;
+                zone.occupiedM2 = 0;
+                logAudit('OCUPACION', 'Liberación de Espacio', `Se liberó el espacio de ${zone.code}`);
+                showToast(`Espacio en ${zone.code} liberado`, 'info');
+                refreshAllViews();
+            }
+        }
+
+        function processInboundSubmit() {
+            const clientId = document.getElementById('inbound-client')?.value;
+            const productId = document.getElementById('inbound-product')?.value;
+            const zoneId = document.getElementById('inbound-zone')?.value;
+            const qty = Number(document.getElementById('inbound-qty')?.value);
+            const m2 = Number(document.getElementById('inbound-m2')?.value);
+
+            if (!productId || qty <= 0) return showToast('Seleccione un producto y cantidad válida', 'error');
+
+            const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+            const ingId = `ING-2026-00${state.inbounds.length + 1}`;
+
+            // 1. Record Inbound
+            state.inbounds.unshift({ id: ingId, timestamp, clientId, productId, zoneId, qty, m2, user: 'Juan Silva' });
+
+            // 2. Update Stock
+            let existingStock = state.stock.find(s => s.productId === productId && s.zoneId === zoneId);
+            if (existingStock) {
+                existingStock.quantity += qty;
+                existingStock.m2Used += m2;
+            } else {
+                state.stock.push({ id: `STK-${Date.now()}`, productId, zoneId, clientId, quantity: qty, m2Used: m2 });
+            }
+
+            // 3. Update Zone occupancy
+            const zone = state.zones.find(z => z.id === zoneId);
+            if (zone) {
+                zone.occupiedM2 += m2;
+                zone.clientId = clientId;
+            }
+
+            // 4. Record Kardex
+            const prod = state.products.find(p => p.id === productId);
+            const client = state.clients.find(c => c.id === clientId);
+            const currentBalance = (existingStock ? existingStock.quantity : qty);
+
+            state.kardex.unshift({
+                timestamp,
+                type: 'ENTRADA',
+                sku: prod ? prod.sku : '',
+                productName: prod ? prod.name : '',
+                clientName: client ? client.name : '',
+                in: qty,
+                out: 0,
+                balance: currentBalance,
+                zone: zone ? zone.code : '',
+                details: `Ingreso Documento ${ingId}`
+            });
+
+            logAudit('INGRESOS', 'Recepcion Mercancía', `Ingreso de ${qty} un. de ${prod?.sku} en ${zone?.code}`);
+            showToast('Ingreso registrado correctamente', 'success');
+            closeModal('modal-new-inbound');
+            refreshAllViews();
+        }
+
+        function processOutboundSubmit() {
+            const stockId = document.getElementById('outbound-stock-item')?.value;
+            const qty = Number(document.getElementById('outbound-qty')?.value);
+            const destination = document.getElementById('outbound-destination')?.value || 'Despacho Cliente';
+
+            const stk = state.stock.find(s => s.id === stockId);
+            if (!stk || qty <= 0 || qty > stk.quantity) return showToast('Cantidad a despachar excede existencias disponibles', 'error');
+
+            const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+            const salId = `SAL-2026-00${state.outbounds.length + 1}`;
+
+            stk.quantity -= qty;
+
+            const prod = state.products.find(p => p.id === stk.productId);
+            const client = state.clients.find(c => c.id === stk.clientId);
+            const zone = state.zones.find(z => z.id === stk.zoneId);
+
+            // Record Outbound
+            state.outbounds.unshift({ id: salId, timestamp, clientId: stk.clientId, productId: stk.productId, zoneId: stk.zoneId, qty, destination, user: 'Juan Silva' });
+
+            // Kardex
+            state.kardex.unshift({
+                timestamp,
+                type: 'SALIDA',
+                sku: prod ? prod.sku : '',
+                productName: prod ? prod.name : '',
+                clientName: client ? client.name : '',
+                in: 0,
+                out: qty,
+                balance: stk.quantity,
+                zone: zone ? zone.code : '',
+                details: `Despacho ${salId} - ${destination}`
+            });
+
+            logAudit('SALIDAS', 'Despacho Mercancía', `Salida de ${qty} un. de ${prod?.sku} desde ${zone?.code}`);
+            showToast('Salida/Despacho procesado exitosamente', 'success');
+            closeModal('modal-new-outbound');
+            refreshAllViews();
+        }
+
+        function processStockAdjustment() {
+            const stockId = document.getElementById('adjust-stock-item')?.value;
+            const type = document.getElementById('adjust-type')?.value;
+            const qty = Number(document.getElementById('adjust-qty')?.value);
+            const reason = document.getElementById('adjust-reason')?.value || 'Ajuste manual de inventario';
+
+            const stk = state.stock.find(s => s.id === stockId);
+            if (!stk || qty <= 0) return showToast('Datos de ajuste inválidos', 'error');
+
+            if (type === 'NEG' && qty > stk.quantity) return showToast('El ajuste negativo supera el stock actual', 'error');
+
+            const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+            if (type === 'POS') stk.quantity += qty;
+            else stk.quantity -= qty;
+
+            const prod = state.products.find(p => p.id === stk.productId);
+            const client = state.clients.find(c => c.id === stk.clientId);
+            const zone = state.zones.find(z => z.id === stk.zoneId);
+
+            state.kardex.unshift({
+                timestamp,
+                type: 'AJUSTE',
+                sku: prod ? prod.sku : '',
+                productName: prod ? prod.name : '',
+                clientName: client ? client.name : '',
+                in: type === 'POS' ? qty : 0,
+                out: type === 'NEG' ? qty : 0,
+                balance: stk.quantity,
+                zone: zone ? zone.code : '',
+                details: `Ajuste (${type}): ${reason}`
+            });
+
+            logAudit('INVENTARIO', 'Ajuste Manual', `Ajuste ${type} de ${qty} un. en SKU ${prod?.sku}`);
+            showToast('Ajuste de inventario guardado', 'success');
+            closeModal('modal-adjust-stock');
+            refreshAllViews();
+        }
+
+        function saveNewInvoice() {
+            const clientId = document.getElementById('invoice-client')?.value;
+            const number = document.getElementById('invoice-number')?.value || `FAC-2026-${state.invoices.length + 1}`;
+            const issueDate = document.getElementById('invoice-issue-date')?.value;
+            const dueDate = document.getElementById('invoice-due-date')?.value;
+            const total = Number(document.getElementById('invoice-total')?.value);
+
+            if (!clientId || !dueDate || total <= 0) return showToast('Por favor ingrese todos los datos requeridos', 'error');
+
+            // Status check against current date
+            const today = new Date().toISOString().split('T')[0];
+            const status = dueDate < today ? 'VENCIDA' : 'PENDIENTE';
+
+            const invId = `INV-${Date.now()}`;
+            state.invoices.unshift({ id: invId, number, clientId, issueDate, dueDate, total, status });
+
+            const client = state.clients.find(c => c.id === clientId)?.name;
+            logAudit('CARTERA', 'Registro Factura', `Factura ${number} por $${total} creada para ${client}`);
+            showToast('Factura registrada en Cartera', 'success');
+            closeModal('modal-new-invoice');
+            refreshAllViews();
+        }
+
+        function saveNewClient() {
+            const nit = document.getElementById('new-client-nit')?.value;
+            const name = document.getElementById('new-client-name')?.value;
+            if (!nit || !name) return showToast('Ingrese NIT y Nombre', 'error');
+
+            const id = `CLI-0${state.clients.length + 1}`;
+            state.clients.push({ id, nit, name });
+            logAudit('MAESTROS', 'Nuevo Cliente', `Cliente ${name} (${nit}) creado`);
+            showToast('Cliente creado', 'success');
+            closeModal('modal-new-client');
+            refreshAllViews();
+        }
+
+        function saveNewProduct() {
+            const sku = document.getElementById('new-product-sku')?.value;
+            const name = document.getElementById('new-product-name')?.value;
+            const clientId = document.getElementById('new-product-client')?.value;
+            if (!sku || !name) return showToast('Ingrese SKU y Nombre', 'error');
+
+            const id = `P-0${state.products.length + 1}`;
+            state.products.push({ id, sku, name, clientId });
+            logAudit('MAESTROS', 'Nuevo Producto', `Producto ${sku} - ${name} registrado`);
+            showToast('Producto registrado', 'success');
+            closeModal('modal-new-product');
+            refreshAllViews();
+        }
+
+        function saveNewZone() {
+            const code = document.getElementById('new-zone-code')?.value;
+            const maxM2 = Number(document.getElementById('new-zone-m2')?.value);
+            if (!code || maxM2 <= 0) return showToast('Ingrese datos válidos de zona', 'error');
+
+            const id = `Z-${Date.now()}`;
+            state.zones.push({ id, code, maxM2, occupiedM2: 0, clientId: null });
+            logAudit('MAESTROS', 'Nueva Zona', `Zona ${code} (${maxM2} m²) creada`);
+            showToast('Zona creada', 'success');
+            closeModal('modal-new-zone');
+            refreshAllViews();
+        }
+    </script>
+</body>
+</html>
