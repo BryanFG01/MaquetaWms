@@ -1240,6 +1240,7 @@
             if (issueInput) issueInput.value = today;
 
             refreshAllViews();
+            requestCameraPermissionOnMobile();
         };
 
         function toggleSidebar(open) {
@@ -2263,6 +2264,28 @@
         // ========================================== //
         // CONTEO AUTOMÁTICO DE INVENTARIO POR QR       //
         // ========================================== //
+
+        function isMobileDevice() {
+            const ua = navigator.userAgent || '';
+            const touchMac = /Macintosh/i.test(ua) && navigator.maxTouchPoints > 1; // iPadOS reporta UA de escritorio
+            return /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(ua) || touchMac;
+        }
+
+        // Solicita el permiso de cámara apenas se abre la web en un celular/tablet,
+        // para que al momento de escanear el QR ya esté concedido y no haya demora.
+        async function requestCameraPermissionOnMobile() {
+            if (!isMobileDevice()) return;
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                // Se libera de inmediato: solo queríamos disparar el prompt de permiso.
+                stream.getTracks().forEach(track => track.stop());
+                showToast('Permiso de cámara concedido. Ya puede escanear códigos QR.', 'success');
+            } catch (err) {
+                showToast('Active el permiso de cámara en su navegador para poder escanear códigos QR', 'info');
+            }
+        }
 
         function openAdjustModalFor(stockId) {
             openModal('modal-adjust-stock');
