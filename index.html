@@ -378,13 +378,13 @@
                 </div>
 
                 <!-- Visual Grid of Warehouse Zones -->
-                <div class="border border-slate-200 p-6 rounded-2xl shadow-xl text-white">
-                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-800">
+                <div class="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-200">
                         <div class="flex items-center space-x-3">
-                            <span class="text-xs uppercase tracking-wider font-semibold bg-slate-800 px-3 py-1 rounded-full text-brand-400 border border-slate-700" id="ocupacion-warehouse-badge">Bodega Principal</span>
+                            <span class="text-xs uppercase tracking-wider font-semibold bg-brand-50 px-3 py-1 rounded-full text-brand-700 border border-brand-100" id="ocupacion-warehouse-badge">Bodega Principal</span>
                         </div>
-                        <div class="flex items-center space-x-4 text-xs text-slate-400">
-                            <span class="flex items-center"><span class="w-3 h-3 bg-emerald-500 rounded-full mr-1.5 inline-block"></span> Libre</span>
+                        <div class="flex items-center space-x-4 text-xs text-slate-500">
+                            <span class="flex items-center"><span class="w-3 h-3 bg-slate-300 rounded-full mr-1.5 inline-block"></span> Libre</span>
                             <span class="flex items-center"><span class="w-3 h-3 bg-brand-500 rounded-full mr-1.5 inline-block"></span> En Uso</span>
                             <span class="flex items-center"><span class="w-3 h-3 bg-rose-500 rounded-full mr-1.5 inline-block"></span> Lleno (100%)</span>
                         </div>
@@ -1511,40 +1511,43 @@
                 const client = state.clients.find(c => c.id === zone.clientId);
                 const percent = Math.min(100, Math.round((zone.occupiedM2 / zone.maxM2) * 100));
                 
-                let statusBadge = `<span class="bg-white text-gray-800 text-[10px] px-2 py-0.5 rounded-full">Libre</span>`;
-                let borderColor = 'border-slate-700';
-                let progressBg = 'bg-emerald-500';
+                let statusBadge = `<span class="bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded-full font-semibold">Libre</span>`;
+                let cardBg = 'bg-slate-50';
+                let borderColor = 'border-slate-200';
+                let progressBg = 'bg-slate-300';
 
                 if (percent > 0 && percent < 100) {
-                    statusBadge = `<span class="bg-brand-500 text-white text-[10px] px-2 py-0.5 rounded-full">Ocupado ${percent}%</span>`;
-                    borderColor = 'border-brand-500';
+                    statusBadge = `<span class="bg-brand-100 text-brand-700 text-[10px] px-2 py-0.5 rounded-full font-semibold">Ocupado ${percent}%</span>`;
+                    cardBg = 'bg-brand-50/60';
+                    borderColor = 'border-brand-200';
                     progressBg = 'bg-brand-500';
                 } else if (percent >= 100) {
-                    statusBadge = `<span class="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full">Lleno (100%)</span>`;
-                    borderColor = 'border-rose-500';
+                    statusBadge = `<span class="bg-rose-100 text-rose-700 text-[10px] px-2 py-0.5 rounded-full font-semibold">Lleno (100%)</span>`;
+                    cardBg = 'bg-rose-50/60';
+                    borderColor = 'border-rose-200';
                     progressBg = 'bg-rose-500';
                 }
 
                 grid.innerHTML += `
-                    <div class="bg-black rounded-xl p-4 border ${borderColor} zone-box flex flex-col justify-between">
+                    <div class="${cardBg} rounded-xl p-4 border ${borderColor} zone-box flex flex-col justify-between shadow-sm">
                         <div>
                             <div class="flex justify-between items-start mb-2">
-                                <h5 class="font-bold text-sm text-white">${zone.code}</h5>
+                                <h5 class="font-bold text-sm text-slate-800">${zone.code}</h5>
                                 ${statusBadge}
                             </div>
-                            <p class="text-xs text-slate-400 mb-1"><i class="fa-solid fa-user text-slate-500 mr-1"></i> ${client ? client.name : 'Sin asignar (Bodega General)'}</p>
-                            <div class="text-xs text-slate-300 font-semibold mb-3">
+                            <p class="text-xs text-slate-500 mb-1"><i class="fa-solid fa-user text-slate-400 mr-1"></i> ${client ? client.name : 'Sin asignar (Bodega General)'}</p>
+                            <div class="text-xs text-slate-600 font-semibold mb-3">
                                 ${zone.occupiedM2} m² / ${zone.maxM2} m²
                             </div>
                         </div>
 
                         <div>
-                            <div class="w-full bg-slate-700 h-2 rounded-full overflow-hidden mb-3">
+                            <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden mb-3">
                                 <div class="${progressBg} h-full" style="width: ${percent}%"></div>
                             </div>
-                            <div class="flex justify-between items-center text-[11px] pt-2 border-t border-slate-700 text-slate-400">
-                                <span>Disponibles: <strong class="text-white">${zone.maxM2 - zone.occupiedM2} m²</strong></span>
-                                <button onclick="deallocateZone('${zone.id}')" class="text-rose-400 hover:underline">Liberar</button>
+                            <div class="flex justify-between items-center text-[11px] pt-2 border-t border-slate-200 text-slate-500">
+                                <span>Disponibles: <strong class="text-slate-700">${zone.maxM2 - zone.occupiedM2} m²</strong></span>
+                                <button onclick="deallocateZone('${zone.id}')" class="text-rose-500 hover:underline font-medium">Liberar</button>
                             </div>
                         </div>
                     </div>
