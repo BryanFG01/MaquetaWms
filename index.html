@@ -177,6 +177,14 @@
             <!-- MODULE 1: DASHBOARD & KPIS -->
             <!-- ========================================== -->
             <section id="mod-dashboard" class="tab-content space-y-6">
+                <!-- Warehouse Filter Bar -->
+                <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-3">
+                    <span class="text-xs font-semibold text-slate-500 flex items-center"><i class="fa-solid fa-warehouse mr-1.5 text-brand-500"></i>Filtrar por Bodega:</span>
+                    <select id="filter-warehouse-dashboard" onchange="setGlobalWarehouseFilter(this.value)" class="warehouse-filter-select px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold bg-white text-slate-700">
+                        <!-- Injected JS -->
+                    </select>
+                </div>
+
                 <!-- Top KPI Metric Cards -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <!-- Card 1: Bodega Occupancy -->
@@ -312,17 +320,25 @@
             <!-- ========================================== -->
             <section id="mod-ocupacion" class="tab-content hidden space-y-6">
                 <!-- Header Controls & Totals -->
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
                     <div>
                         <h3 class="text-lg font-bold text-slate-800">Plano Interactivo de Ocupación de Bodega</h3>
                         <p class="text-xs text-slate-500">Visualización de zonas por m², asignación a terceros y control de área utilizada vs. libre.</p>
                     </div>
-                    <div class="flex items-center space-x-3">
-                        <button onclick="openModal('modal-update-warehouse')" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1">
+                    <div class="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
+                        <select id="select-current-warehouse" onchange="switchWarehouse(this.value)" class="px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white text-slate-700 min-w-[180px]">
+                            <!-- Injected JS -->
+                        </select>
+                        <div class="hidden sm:block w-px h-6 bg-slate-200"></div>
+                        <button onclick="openModal('modal-new-warehouse')" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1.5 whitespace-nowrap">
+                            <i class="fa-solid fa-warehouse"></i>
+                            <span>Nueva Bodega</span>
+                        </button>
+                        <button onclick="openWarehouseSettingsModal()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1.5 whitespace-nowrap">
                             <i class="fa-solid fa-ruler-combined"></i>
                             <span>Medidas Bodega</span>
                         </button>
-                        <button onclick="openModal('modal-allocate-zone')" class="px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1">
+                        <button onclick="openModal('modal-allocate-zone')" class="px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1.5 whitespace-nowrap sm:ml-auto">
                             <i class="fa-solid fa-plus"></i>
                             <span>Asignar Espacio a Cliente</span>
                         </button>
@@ -365,7 +381,7 @@
                 <div class="border border-slate-200 p-6 rounded-2xl shadow-xl text-white">
                     <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-800">
                         <div class="flex items-center space-x-3">
-                            <span class="text-xs uppercase tracking-wider font-semibold bg-slate-800 px-3 py-1 rounded-full text-brand-400 border border-slate-700">Bodega Principal - Naves A, B, C</span>
+                            <span class="text-xs uppercase tracking-wider font-semibold bg-slate-800 px-3 py-1 rounded-full text-brand-400 border border-slate-700" id="ocupacion-warehouse-badge">Bodega Principal</span>
                         </div>
                         <div class="flex items-center space-x-4 text-xs text-slate-400">
                             <span class="flex items-center"><span class="w-3 h-3 bg-emerald-500 rounded-full mr-1.5 inline-block"></span> Libre</span>
@@ -383,7 +399,7 @@
                 <!-- Client Area Allocation Table -->
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                     <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-                        <h4 class="font-bold text-sm text-slate-800">Resumen de Ocupación por Cliente Tenedor</h4>
+                        <h4 class="font-bold text-sm text-slate-800">Resumen de Ocupación por Cliente Tenedor <span class="text-slate-400 font-normal" id="client-table-warehouse-label"></span></h4>
                         <span class="text-xs text-slate-500">Control de m² facturables</span>
                     </div>
                     <div class="overflow-x-auto">
@@ -410,15 +426,20 @@
             <!-- MODULE 3: INGRESOS (ENTRADAS DE MERCANCÍA) -->
             <!-- ========================================== -->
             <section id="mod-ingresos" class="tab-content hidden space-y-6">
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row flex-wrap justify-between items-start sm:items-center gap-4">
                     <div>
                         <h3 class="text-lg font-bold text-slate-800">Ingreso de Mercancía a Bodega</h3>
                         <p class="text-xs text-slate-500">Registro de recepción de stock, asignación de ubicación y m² consumidos.</p>
                     </div>
-                    <button onclick="openModal('modal-new-inbound')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1.5">
-                        <i class="fa-solid fa-plus-circle"></i>
-                        <span>Registrar Nuevo Ingreso</span>
-                    </button>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <select id="filter-warehouse-ingresos" onchange="setGlobalWarehouseFilter(this.value)" class="warehouse-filter-select px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white text-slate-700 min-w-[160px]">
+                            <!-- Injected JS -->
+                        </select>
+                        <button onclick="openModal('modal-new-inbound')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1.5 whitespace-nowrap">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span>Registrar Nuevo Ingreso</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -455,15 +476,20 @@
             <!-- MODULE 4: SALIDAS (DESPACHO DE MERCANCÍA) -->
             <!-- ========================================== -->
             <section id="mod-salidas" class="tab-content hidden space-y-6">
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row flex-wrap justify-between items-start sm:items-center gap-4">
                     <div>
                         <h3 class="text-lg font-bold text-slate-800">Despacho de Mercancía (Salidas)</h3>
                         <p class="text-xs text-slate-500">Salida directa de stock desde ubicaciones sin módulo de pedidos previo.</p>
                     </div>
-                    <button onclick="openModal('modal-new-outbound')" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1.5">
-                        <i class="fa-solid fa-truck-moving"></i>
-                        <span>Registrar Salida / Despacho</span>
-                    </button>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <select id="filter-warehouse-salidas" onchange="setGlobalWarehouseFilter(this.value)" class="warehouse-filter-select px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white text-slate-700 min-w-[160px]">
+                            <!-- Injected JS -->
+                        </select>
+                        <button onclick="openModal('modal-new-outbound')" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1.5 whitespace-nowrap">
+                            <i class="fa-solid fa-truck-moving"></i>
+                            <span>Registrar Salida / Despacho</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -501,14 +527,17 @@
             <!-- ========================================== -->
             <section id="mod-inventario" class="tab-content hidden space-y-6">
                 <!-- Sub tabs for inventory -->
-                <div class="flex space-x-3 border-b border-slate-200 pb-2">
-                    <button onclick="toggleInventorySubtab('existencias')" id="subtab-existencias" class="px-4 py-2 text-xs font-bold rounded-lg bg-slate-800 text-white shadow-sm">
+                <div class="flex flex-wrap items-center gap-3 border-b border-slate-200 pb-3">
+                    <button onclick="toggleInventorySubtab('existencias')" id="subtab-existencias" class="px-4 py-2 text-xs font-bold rounded-lg bg-slate-800 text-white shadow-sm whitespace-nowrap">
                         <i class="fa-solid fa-boxes-stacked mr-1.5"></i>Existencias por Ubicación
                     </button>
-                    <button onclick="toggleInventorySubtab('kardex')" id="subtab-kardex" class="px-4 py-2 text-xs font-bold rounded-lg bg-white text-slate-600 hover:bg-slate-100 border border-slate-200">
+                    <button onclick="toggleInventorySubtab('kardex')" id="subtab-kardex" class="px-4 py-2 text-xs font-bold rounded-lg bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 whitespace-nowrap">
                         <i class="fa-solid fa-list-check mr-1.5"></i>Kardex Auditor (Movimientos)
                     </button>
-                    <button onclick="openModal('modal-adjust-stock')" class="ml-auto px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-medium shadow-sm">
+                    <select id="filter-warehouse-inventario" onchange="setGlobalWarehouseFilter(this.value)" class="warehouse-filter-select sm:ml-auto px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white text-slate-700 min-w-[160px]">
+                        <!-- Injected JS -->
+                    </select>
+                    <button onclick="openModal('modal-adjust-stock')" class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-medium shadow-sm whitespace-nowrap">
                         <i class="fa-solid fa-sliders mr-1"></i>Ajuste Manual (+/-)
                     </button>
                 </div>
@@ -581,18 +610,23 @@
             <!-- MODULE 6: CARTERA Y FACTURACIÓN -->
             <!-- ========================================== -->
             <section id="mod-cartera" class="tab-content hidden space-y-6">
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row flex-wrap justify-between items-start sm:items-center gap-4">
                     <div>
                               <h2 class="text-md font-semibold text-red-500">{Pendiente por validar}    </h2>
                         <h3 class="text-lg font-bold text-slate-800">Módulo de Cartera y Facturación Manual</h3>
-                  
-                        
+
+
                         <p class="text-xs text-slate-500">Registro de facturas emitidas por servicios de almacenamiento, vencimientos y estado de cuenta.</p>
                     </div>
-                    <button onclick="openModal('modal-new-invoice')" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1.5">
-                        <i class="fa-solid fa-file-circle-plus"></i>
-                        <span>Registrar Factura</span>
-                    </button>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <select id="filter-warehouse-cartera" onchange="setGlobalWarehouseFilter(this.value)" class="warehouse-filter-select px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white text-slate-700 min-w-[160px]">
+                            <!-- Injected JS -->
+                        </select>
+                        <button onclick="openModal('modal-new-invoice')" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-medium shadow-sm flex items-center space-x-1.5 whitespace-nowrap">
+                            <i class="fa-solid fa-file-circle-plus"></i>
+                            <span>Registrar Factura</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Cartera Summary Widgets -->
@@ -668,7 +702,22 @@
                 </div>
 
                 <!-- Maestros Tabs -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    <!-- BODEGAS MAESTRO -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="font-bold text-slate-800 flex items-center text-sm"><i class="fa-solid fa-warehouse text-rose-600 mr-2"></i>Bodegas</h4>
+                                <button onclick="openModal('modal-new-warehouse')" class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold px-2.5 py-1 rounded">
+                                    + Nueva
+                                </button>
+                            </div>
+                            <ul id="master-warehouses-list" class="divide-y divide-slate-100 text-xs custom-scrollbar max-h-60 overflow-y-auto">
+                                <!-- Injected JS -->
+                            </ul>
+                        </div>
+                    </div>
+
                     <!-- CLIENTES MAESTRO -->
                     <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
                         <div>
@@ -720,9 +769,14 @@
             <!-- MODULE 8: TRAZABILIDAD Y AUDITORÍA -->
             <!-- ========================================== -->
             <section id="mod-auditoria" class="tab-content hidden space-y-6">
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 class="text-lg font-bold text-slate-800">Trazabilidad & Log de Auditoría</h3>
-                    <p class="text-xs text-slate-500">Registro inmutable de cambios en cartera, ocupación de zonas, ajustes y movimientos del sistema.</p>
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">Trazabilidad & Log de Auditoría</h3>
+                        <p class="text-xs text-slate-500">Registro inmutable de cambios en cartera, ocupación de zonas, ajustes y movimientos del sistema.</p>
+                    </div>
+                    <select id="filter-warehouse-auditoria" onchange="setGlobalWarehouseFilter(this.value)" class="warehouse-filter-select px-3 py-2 border border-slate-300 rounded-lg text-xs font-semibold bg-white text-slate-700 min-w-[160px]">
+                        <!-- Injected JS -->
+                    </select>
                 </div>
 
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -770,16 +824,39 @@
             <div class="space-y-4 text-xs">
                 <div>
                     <label class="block font-medium text-slate-700 mb-1">Nombre de Bodega</label>
-                    <input type="text" id="input-wh-name" value="Bodega Central Principal" class="w-full p-2 border border-slate-300 rounded-lg">
+                    <input type="text" id="input-wh-name" class="w-full p-2 border border-slate-300 rounded-lg">
                 </div>
                 <div>
                     <label class="block font-medium text-slate-700 mb-1">Capacidad Total en Metros Cuadrados (m²)</label>
-                    <input type="number" id="input-wh-area" value="1200" class="w-full p-2 border border-slate-300 rounded-lg">
+                    <input type="number" id="input-wh-area" class="w-full p-2 border border-slate-300 rounded-lg">
                 </div>
             </div>
             <div class="mt-6 flex justify-end space-x-2 text-xs">
                 <button onclick="closeModal('modal-update-warehouse')" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-600">Cancelar</button>
                 <button onclick="saveWarehouseCapacity()" class="px-4 py-2 bg-brand-600 text-white rounded-lg font-semibold">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 1B: Nueva Bodega -->
+    <div id="modal-new-warehouse" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center">
+                <i class="fa-solid fa-warehouse text-emerald-600 mr-2"></i> Registrar Nueva Bodega
+            </h3>
+            <div class="space-y-4 text-xs">
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Nombre de la Bodega</label>
+                    <input type="text" id="input-new-wh-name" placeholder="Ej: Bodega Norte Medellín" class="w-full p-2 border border-slate-300 rounded-lg">
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Capacidad Total en Metros Cuadrados (m²)</label>
+                    <input type="number" id="input-new-wh-area" min="1" placeholder="Ej: 900" class="w-full p-2 border border-slate-300 rounded-lg">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-2 text-xs">
+                <button onclick="closeModal('modal-new-warehouse')" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-600">Cancelar</button>
+                <button onclick="saveNewWarehouse()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold">Crear Bodega</button>
             </div>
         </div>
     </div>
@@ -931,6 +1008,10 @@
                     <select id="invoice-client" class="w-full p-2 border border-slate-300 rounded-lg"></select>
                 </div>
                 <div>
+                    <label class="block font-medium text-slate-700 mb-1">Bodega</label>
+                    <select id="invoice-warehouse" class="w-full p-2 border border-slate-300 rounded-lg"></select>
+                </div>
+                <div>
                     <label class="block font-medium text-slate-700 mb-1">Número Factura / Doc</label>
                     <input type="text" id="invoice-number" placeholder="Ej: FAC-9082" class="w-full p-2 border border-slate-300 rounded-lg">
                 </div>
@@ -985,6 +1066,7 @@
     <div id="modal-new-zone" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl relative text-xs">
             <h3 class="font-bold text-sm text-slate-800 mb-3">Nueva Zona / Nave</h3>
+            <select id="new-zone-warehouse" class="w-full p-2 mb-2 border rounded"></select>
             <input type="text" id="new-zone-code" placeholder="Código Zona (ej: Zona D)" class="w-full p-2 mb-2 border rounded">
             <input type="number" id="new-zone-m2" placeholder="Área Máxima en m²" class="w-full p-2 mb-2 border rounded">
             <div class="flex justify-end space-x-2 mt-4">
@@ -1002,22 +1084,24 @@
     <!-- ========================================== -->
     <script>
         const state = {
-            warehouse: {
-                id: 'WH-01',
-                name: 'Bodega Principal LogiMaster',
-                totalAreaM2: 1200
-            },
+            warehouses: [
+                { id: 'WH-01', name: 'Bodega Principal LogiMaster', totalAreaM2: 1200 },
+                { id: 'WH-02', name: 'Bodega Norte Medellín', totalAreaM2: 800 }
+            ],
+            currentWarehouseId: 'WH-01',
+            globalFilterWarehouseId: 'ALL',
             clients: [
                 { id: 'CLI-01', nit: '900.123.456-1', name: 'Logística Alfa S.A.S.' },
                 { id: 'CLI-02', nit: '811.987.654-2', name: 'Comercializadora Sur' },
                 { id: 'CLI-03', nit: '901.555.333-8', name: 'Importaciones Globales' }
             ],
             zones: [
-                { id: 'Z-A1', code: 'Zona A1 (Carga Fría)', maxM2: 250, occupiedM2: 180, clientId: 'CLI-01' },
-                { id: 'Z-A2', code: 'Zona A2 (Racks Altos)', maxM2: 300, occupiedM2: 220, clientId: 'CLI-02' },
-                { id: 'Z-B1', code: 'Zona B1 (Estantería)', maxM2: 250, occupiedM2: 120, clientId: 'CLI-03' },
-                { id: 'Z-B2', code: 'Zona B2 (Piso General)', maxM2: 200, occupiedM2: 0, clientId: null },
-                { id: 'Z-C1', code: 'Zona C1 (Peligrosos)', maxM2: 200, occupiedM2: 80, clientId: 'CLI-01' }
+                { id: 'Z-A1', code: 'Zona A1 (Carga Fría)', warehouseId: 'WH-01', maxM2: 250, occupiedM2: 180, clientId: 'CLI-01' },
+                { id: 'Z-A2', code: 'Zona A2 (Racks Altos)', warehouseId: 'WH-01', maxM2: 300, occupiedM2: 220, clientId: 'CLI-02' },
+                { id: 'Z-B1', code: 'Zona B1 (Estantería)', warehouseId: 'WH-01', maxM2: 250, occupiedM2: 120, clientId: 'CLI-03' },
+                { id: 'Z-B2', code: 'Zona B2 (Piso General)', warehouseId: 'WH-01', maxM2: 200, occupiedM2: 0, clientId: null },
+                { id: 'Z-C1', code: 'Zona C1 (Peligrosos)', warehouseId: 'WH-01', maxM2: 200, occupiedM2: 80, clientId: 'CLI-01' },
+                { id: 'Z-D1', code: 'Zona D1 (Piso General)', warehouseId: 'WH-02', maxM2: 400, occupiedM2: 0, clientId: null }
             ],
             products: [
                 { id: 'P-01', sku: 'SKU-PAL-001', name: 'Pallets Madera Estándar', clientId: 'CLI-01' },
@@ -1032,25 +1116,25 @@
                 { id: 'STK-104', productId: 'P-04', zoneId: 'Z-C1', clientId: 'CLI-01', quantity: 90, m2Used: 50 }
             ],
             inbounds: [
-                { id: 'ING-2026-001', timestamp: '2026-09-01 08:30', clientId: 'CLI-01', productId: 'P-01', zoneId: 'Z-A1', qty: 500, m2: 100, user: 'Bryan' },
-                { id: 'ING-2026-002', timestamp: '2026-09-05 14:15', clientId: 'CLI-02', productId: 'P-02', zoneId: 'Z-A2', qty: 1200, m2: 150, user: 'Pedro Gomez' }
+                { id: 'ING-2026-001', timestamp: '2026-09-01 08:30', clientId: 'CLI-01', productId: 'P-01', zoneId: 'Z-A1', warehouseId: 'WH-01', qty: 500, m2: 100, user: 'Bryan' },
+                { id: 'ING-2026-002', timestamp: '2026-09-05 14:15', clientId: 'CLI-02', productId: 'P-02', zoneId: 'Z-A2', warehouseId: 'WH-01', qty: 1200, m2: 150, user: 'Pedro Gomez' }
             ],
             outbounds: [
-                { id: 'SAL-2026-001', timestamp: '2026-09-08 10:00', clientId: 'CLI-01', productId: 'P-01', zoneId: 'Z-A1', qty: 50, destination: 'Despacho Cliente Alfa Medellín', user: 'Bryans' }
+                { id: 'SAL-2026-001', timestamp: '2026-09-08 10:00', clientId: 'CLI-01', productId: 'P-01', zoneId: 'Z-A1', warehouseId: 'WH-01', qty: 50, destination: 'Despacho Cliente Alfa Medellín', user: 'Bryans' }
             ],
             invoices: [
-                { id: 'INV-101', number: 'FAC-2026-01', clientId: 'CLI-01', issueDate: '2026-08-01', dueDate: '2026-08-31', total: 4500, status: 'VENCIDA' },
-                { id: 'INV-102', number: 'FAC-2026-02', clientId: 'CLI-02', issueDate: '2026-09-01', dueDate: '2026-09-25', total: 3200, status: 'PENDIENTE' },
-                { id: 'INV-103', number: 'FAC-2026-03', clientId: 'CLI-03', issueDate: '2026-08-15', dueDate: '2026-09-15', total: 1800, status: 'PENDIENTE' },
-                { id: 'INV-104', number: 'FAC-2026-04', clientId: 'CLI-01', issueDate: '2026-07-10', dueDate: '2026-08-10', total: 5000, status: 'PAGADA' }
+                { id: 'INV-101', number: 'FAC-2026-01', clientId: 'CLI-01', warehouseId: 'WH-01', issueDate: '2026-08-01', dueDate: '2026-08-31', total: 4500, status: 'VENCIDA' },
+                { id: 'INV-102', number: 'FAC-2026-02', clientId: 'CLI-02', warehouseId: 'WH-01', issueDate: '2026-09-01', dueDate: '2026-09-25', total: 3200, status: 'PENDIENTE' },
+                { id: 'INV-103', number: 'FAC-2026-03', clientId: 'CLI-03', warehouseId: 'WH-01', issueDate: '2026-08-15', dueDate: '2026-09-15', total: 1800, status: 'PENDIENTE' },
+                { id: 'INV-104', number: 'FAC-2026-04', clientId: 'CLI-01', warehouseId: 'WH-01', issueDate: '2026-07-10', dueDate: '2026-08-10', total: 5000, status: 'PAGADA' }
             ],
             kardex: [
-                { timestamp: '2026-09-01 08:30', type: 'ENTRADA', sku: 'SKU-PAL-001', productName: 'Pallets Madera Estándar', clientName: 'Logística Alfa S.A.S.', in: 500, out: 0, balance: 500, zone: 'Zona A1 (Carga Fría)', details: 'Ingreso Inicial Remisión #001' },
-                { timestamp: '2026-09-08 10:00', type: 'SALIDA', sku: 'SKU-PAL-001', productName: 'Pallets Madera Estándar', clientName: 'Logística Alfa S.A.S.', in: 0, out: 50, balance: 450, zone: 'Zona A1 (Carga Fría)', details: 'Despacho Carga Medellín' }
+                { timestamp: '2026-09-01 08:30', type: 'ENTRADA', sku: 'SKU-PAL-001', productName: 'Pallets Madera Estándar', clientName: 'Logística Alfa S.A.S.', in: 500, out: 0, balance: 500, zone: 'Zona A1 (Carga Fría)', warehouseId: 'WH-01', details: 'Ingreso Inicial Remisión #001' },
+                { timestamp: '2026-09-08 10:00', type: 'SALIDA', sku: 'SKU-PAL-001', productName: 'Pallets Madera Estándar', clientName: 'Logística Alfa S.A.S.', in: 0, out: 50, balance: 450, zone: 'Zona A1 (Carga Fría)', warehouseId: 'WH-01', details: 'Despacho Carga Medellín' }
             ],
             auditLogs: [
-                { timestamp: '2026-09-01 08:30', module: 'INGRESOS', action: 'Ingreso de mercancía', detail: 'Ingreso 500 unidades de SKU-PAL-001 en Zona A1', user: 'Bryan' },
-                { timestamp: '2026-09-08 10:00', module: 'SALIDAS', action: 'Despacho de mercancía', detail: 'Salida 50 unidades de SKU-PAL-001 de Zona A1', user: 'Bryans' }
+                { timestamp: '2026-09-01 08:30', module: 'INGRESOS', action: 'Ingreso de mercancía', detail: 'Ingreso 500 unidades de SKU-PAL-001 en Zona A1', user: 'Bryan', warehouseId: 'WH-01' },
+                { timestamp: '2026-09-08 10:00', module: 'SALIDAS', action: 'Despacho de mercancía', detail: 'Salida 50 unidades de SKU-PAL-001 de Zona A1', user: 'Bryans', warehouseId: 'WH-01' }
             ]
         };
 
@@ -1131,6 +1215,8 @@
         }
 
         function refreshAllViews() {
+            renderWarehouseSelector();
+            renderGlobalWarehouseFilters();
             renderKPIs();
             renderWarehouseMap();
             renderInboundTable();
@@ -1163,9 +1249,9 @@
             }, 3000);
         }
 
-        function logAudit(module, action, detail, user = 'Bryan') {
+        function logAudit(module, action, detail, user = 'Bryan', warehouseId = null) {
             const timestamp = new Date().toLocaleString();
-            state.auditLogs.unshift({ timestamp, module, action, detail, user });
+            state.auditLogs.unshift({ timestamp, module, action, detail, user, warehouseId });
             renderAuditLogs();
         }
 
@@ -1180,10 +1266,70 @@
             if (modal) modal.classList.remove('hidden');
         }
 
+        function renderWarehouseSelector() {
+            const select = document.getElementById('select-current-warehouse');
+            if (!select) return;
+
+            if (!state.warehouses.find(w => w.id === state.currentWarehouseId)) {
+                state.currentWarehouseId = state.warehouses[0]?.id || null;
+            }
+
+            select.innerHTML = state.warehouses.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+            select.value = state.currentWarehouseId;
+        }
+
+        function switchWarehouse(warehouseId) {
+            state.currentWarehouseId = warehouseId;
+            renderWarehouseMap();
+            populateModalDropdowns();
+        }
+
+        function getCurrentWarehouse() {
+            return state.warehouses.find(w => w.id === state.currentWarehouseId) || state.warehouses[0];
+        }
+
+        function getZoneWarehouseId(zoneId) {
+            return state.zones.find(z => z.id === zoneId)?.warehouseId || null;
+        }
+
+        function matchesWarehouseFilter(warehouseId) {
+            return state.globalFilterWarehouseId === 'ALL' || warehouseId === state.globalFilterWarehouseId;
+        }
+
+        function renderGlobalWarehouseFilters() {
+            if (!state.warehouses.find(w => w.id === state.globalFilterWarehouseId) && state.globalFilterWarehouseId !== 'ALL') {
+                state.globalFilterWarehouseId = 'ALL';
+            }
+
+            const opts = `<option value="ALL">Todas las Bodegas</option>` + state.warehouses.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+            document.querySelectorAll('.warehouse-filter-select').forEach(sel => {
+                sel.innerHTML = opts;
+                sel.value = state.globalFilterWarehouseId;
+            });
+        }
+
+        function setGlobalWarehouseFilter(warehouseId) {
+            state.globalFilterWarehouseId = warehouseId;
+            document.querySelectorAll('.warehouse-filter-select').forEach(sel => { sel.value = warehouseId; });
+
+            renderKPIs();
+            renderDashboardCharts();
+            renderInboundTable();
+            renderOutboundTable();
+            renderInventoryTable();
+            renderKardexTable();
+            renderInvoicesTable();
+            renderAuditLogs();
+        }
+
         function renderKPIs() {
-            // Calculate Warehouse Occupancy
-            const totalOccupiedM2 = state.zones.reduce((sum, z) => sum + z.occupiedM2, 0);
-            const totalCapacity = state.warehouse.totalAreaM2;
+            // Calculate Warehouse Occupancy (respects the active global bodega filter)
+            const filterWh = state.globalFilterWarehouseId;
+            const filteredWarehouses = filterWh === 'ALL' ? state.warehouses : state.warehouses.filter(w => w.id === filterWh);
+            const filteredZones = state.zones.filter(z => matchesWarehouseFilter(z.warehouseId));
+
+            const totalOccupiedM2 = filteredZones.reduce((sum, z) => sum + z.occupiedM2, 0);
+            const totalCapacity = filteredWarehouses.reduce((sum, w) => sum + w.totalAreaM2, 0);
             const occPercent = Math.round((totalOccupiedM2 / totalCapacity) * 100) || 0;
 
             setSafeText('kpi-occupancy-percent', `${occPercent}%`);
@@ -1192,10 +1338,11 @@
             setSafeText('dashboard-free-m2', `${Math.max(0, totalCapacity - totalOccupiedM2)} m²`);
             setSafeText('topbar-occupancy-badge', `${occPercent}%`);
 
-            // Calculate Stock Totals
-            const totalUnits = state.stock.reduce((sum, s) => sum + s.quantity, 0);
+            // Calculate Stock Totals (filtered by bodega)
+            const filteredStockKpi = state.stock.filter(s => matchesWarehouseFilter(getZoneWarehouseId(s.zoneId)));
+            const totalUnits = filteredStockKpi.reduce((sum, s) => sum + s.quantity, 0);
             setSafeText('kpi-total-units', totalUnits.toLocaleString());
-            setSafeText('kpi-total-products', state.products.length);
+            setSafeText('kpi-total-products', new Set(filteredStockKpi.map(s => s.productId)).size);
 
             // Calculate Cartera Stats
             let pendingTotal = 0;
@@ -1203,7 +1350,9 @@
             let paidTotal = 0;
             let overdueCount = 0;
 
-            state.invoices.forEach(inv => {
+            const filteredInvoicesKpi = state.invoices.filter(inv => matchesWarehouseFilter(inv.warehouseId));
+
+            filteredInvoicesKpi.forEach(inv => {
                 const total = Number(inv.total);
                 if (inv.status === 'PAGADA') {
                     paidTotal += total;
@@ -1231,7 +1380,7 @@
             const expTable = document.getElementById('dashboard-expiration-table');
             if (expTable) {
                 expTable.innerHTML = '';
-                const sortedInvoices = [...state.invoices].sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)).slice(0, 5);
+                const sortedInvoices = [...filteredInvoicesKpi].sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)).slice(0, 5);
                 
                 sortedInvoices.forEach(inv => {
                     const client = state.clients.find(c => c.id === inv.clientId)?.name || 'N/A';
@@ -1252,8 +1401,14 @@
         }
 
         function renderDashboardCharts() {
-            const totalOccupiedM2 = state.zones.reduce((sum, z) => sum + z.occupiedM2, 0);
-            const freeM2 = Math.max(0, state.warehouse.totalAreaM2 - totalOccupiedM2);
+            const filterWh = state.globalFilterWarehouseId;
+            const filteredWarehousesChart = filterWh === 'ALL' ? state.warehouses : state.warehouses.filter(w => w.id === filterWh);
+            const filteredZonesChart = state.zones.filter(z => matchesWarehouseFilter(z.warehouseId));
+            const filteredInvoicesChart = state.invoices.filter(inv => matchesWarehouseFilter(inv.warehouseId));
+
+            const totalOccupiedM2 = filteredZonesChart.reduce((sum, z) => sum + z.occupiedM2, 0);
+            const totalCapacityAll = filteredWarehousesChart.reduce((sum, w) => sum + w.totalAreaM2, 0);
+            const freeM2 = Math.max(0, totalCapacityAll - totalOccupiedM2);
 
             // Chart 1: Occupancy Donut
             const canvas1 = document.getElementById('chartOccupancy');
@@ -1276,7 +1431,7 @@
 
             // Chart 2: Cartera Breakdown
             let paid = 0, pending = 0, overdue = 0;
-            state.invoices.forEach(i => {
+            filteredInvoicesChart.forEach(i => {
                 if (i.status === 'PAGADA') paid += Number(i.total);
                 if (i.status === 'PENDIENTE') pending += Number(i.total);
                 if (i.status === 'VENCIDA') overdue += Number(i.total);
@@ -1302,7 +1457,7 @@
 
             // Chart 3: Client Billing Bar
             const clientTotals = {};
-            state.invoices.forEach(i => {
+            filteredInvoicesChart.forEach(i => {
                 const clientName = state.clients.find(c => c.id === i.clientId)?.name || 'N/A';
                 clientTotals[clientName] = (clientTotals[clientName] || 0) + Number(i.total);
             });
@@ -1337,16 +1492,22 @@
             if (!grid) return;
             grid.innerHTML = '';
 
-            const totalOccupied = state.zones.reduce((acc, z) => acc + z.occupiedM2, 0);
-            const totalCapacity = state.warehouse.totalAreaM2;
+            const currentWarehouse = getCurrentWarehouse();
+            if (!currentWarehouse) return;
+
+            const warehouseZones = state.zones.filter(z => z.warehouseId === currentWarehouse.id);
+            const totalOccupied = warehouseZones.reduce((acc, z) => acc + z.occupiedM2, 0);
+            const totalCapacity = currentWarehouse.totalAreaM2;
             const globalPercent = Math.round((totalOccupied / totalCapacity) * 100) || 0;
 
             setSafeText('map-total-capacity', `${totalCapacity} m²`);
             setSafeText('map-occupied-capacity', `${totalOccupied} m²`);
             setSafeText('map-free-capacity', `${Math.max(0, totalCapacity - totalOccupied)} m²`);
             setSafeText('map-percent', `${globalPercent}%`);
+            setSafeText('ocupacion-warehouse-badge', currentWarehouse.name);
+            setSafeText('client-table-warehouse-label', `— ${currentWarehouse.name}`);
 
-            state.zones.forEach(zone => {
+            warehouseZones.forEach(zone => {
                 const client = state.clients.find(c => c.id === zone.clientId);
                 const percent = Math.min(100, Math.round((zone.occupiedM2 / zone.maxM2) * 100));
                 
@@ -1396,7 +1557,7 @@
                 clientTable.innerHTML = '';
 
                 state.clients.forEach(cli => {
-                    const clientZones = state.zones.filter(z => z.clientId === cli.id);
+                    const clientZones = warehouseZones.filter(z => z.clientId === cli.id);
                     const totalM2Used = clientZones.reduce((sum, z) => sum + z.occupiedM2, 0);
                     const sharePercent = ((totalM2Used / totalCapacity) * 100).toFixed(1);
                     const zoneCodes = clientZones.map(z => z.code).join(', ') || 'Sin zonas asignadas';
@@ -1421,9 +1582,11 @@
             const tbody = document.getElementById('inbound-table-body');
             if (!tbody) return;
             tbody.innerHTML = '';
-            setSafeText('inbound-count', `Mostrando ${state.inbounds.length} ingresos`);
 
-            state.inbounds.forEach(ing => {
+            const filteredInbounds = state.inbounds.filter(ing => matchesWarehouseFilter(ing.warehouseId ?? getZoneWarehouseId(ing.zoneId)));
+            setSafeText('inbound-count', `Mostrando ${filteredInbounds.length} ingresos`);
+
+            filteredInbounds.forEach(ing => {
                 const client = state.clients.find(c => c.id === ing.clientId)?.name || 'N/A';
                 const product = state.products.find(p => p.id === ing.productId)?.name || 'N/A';
                 const zone = state.zones.find(z => z.id === ing.zoneId)?.code || 'N/A';
@@ -1447,9 +1610,11 @@
             const tbody = document.getElementById('outbound-table-body');
             if (!tbody) return;
             tbody.innerHTML = '';
-            setSafeText('outbound-count', `Mostrando ${state.outbounds.length} despachos`);
 
-            state.outbounds.forEach(out => {
+            const filteredOutbounds = state.outbounds.filter(out => matchesWarehouseFilter(out.warehouseId ?? getZoneWarehouseId(out.zoneId)));
+            setSafeText('outbound-count', `Mostrando ${filteredOutbounds.length} despachos`);
+
+            filteredOutbounds.forEach(out => {
                 const client = state.clients.find(c => c.id === out.clientId)?.name || 'N/A';
                 const product = state.products.find(p => p.id === out.productId)?.name || 'N/A';
                 const zone = state.zones.find(z => z.id === out.zoneId)?.code || 'N/A';
@@ -1476,6 +1641,7 @@
             const search = document.getElementById('search-inventory')?.value.toLowerCase() || '';
 
             const filteredStock = state.stock.filter(stk => {
+                if (!matchesWarehouseFilter(getZoneWarehouseId(stk.zoneId))) return false;
                 const prod = state.products.find(p => p.id === stk.productId);
                 const client = state.clients.find(c => c.id === stk.clientId);
                 return (prod?.name.toLowerCase().includes(search) || prod?.sku.toLowerCase().includes(search) || client?.name.toLowerCase().includes(search));
@@ -1512,7 +1678,9 @@
             if (!tbody) return;
             tbody.innerHTML = '';
 
-            state.kardex.forEach(k => {
+            const filteredKardex = state.kardex.filter(k => matchesWarehouseFilter(k.warehouseId));
+
+            filteredKardex.forEach(k => {
                 const badgeClass = k.type === 'ENTRADA' ? 'bg-emerald-100 text-emerald-700' : (k.type === 'SALIDA' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700');
                 
                 tbody.innerHTML += `
@@ -1540,6 +1708,7 @@
             const filterStatus = document.getElementById('filter-invoice-status')?.value || 'ALL';
 
             const filtered = state.invoices.filter(inv => {
+                if (!matchesWarehouseFilter(inv.warehouseId)) return false;
                 const client = state.clients.find(c => c.id === inv.clientId)?.name.toLowerCase() || '';
                 const matchSearch = inv.number.toLowerCase().includes(search) || client.includes(search);
                 const matchStatus = filterStatus === 'ALL' || inv.status === filterStatus;
@@ -1575,13 +1744,23 @@
             const inv = state.invoices.find(i => i.id === invId);
             if (inv) {
                 inv.status = 'PAGADA';
-                logAudit('CARTERA', 'Pago de factura', `Factura ${inv.number} fue marcada como PAGADA`);
+                logAudit('CARTERA', 'Pago de factura', `Factura ${inv.number} fue marcada como PAGADA`, 'Bryan', inv.warehouseId);
                 showToast(`Factura ${inv.number} registrada como pagada`, 'success');
                 refreshAllViews();
             }
         }
 
         function renderMasterLists() {
+            // Warehouses
+            const whList = document.getElementById('master-warehouses-list');
+            if (whList) {
+                whList.innerHTML = '';
+                state.warehouses.forEach(w => {
+                    const zoneCount = state.zones.filter(z => z.warehouseId === w.id).length;
+                    whList.innerHTML += `<li class="py-2 border-b border-slate-100 flex justify-between"><div><strong class="block">${w.name}</strong><span class="text-slate-400 text-[10px]">Capacidad: ${w.totalAreaM2} m² · ${zoneCount} zona(s)</span></div></li>`;
+                });
+            }
+
             // Clients
             const cList = document.getElementById('master-clients-list');
             if (cList) {
@@ -1606,7 +1785,8 @@
             if (zList) {
                 zList.innerHTML = '';
                 state.zones.forEach(z => {
-                    zList.innerHTML += `<li class="py-2 border-b border-slate-100 flex justify-between"><div><strong class="block">${z.code}</strong><span class="text-slate-400 text-[10px]">Capacidad Max: ${z.maxM2} m²</span></div></li>`;
+                    const wh = state.warehouses.find(w => w.id === z.warehouseId);
+                    zList.innerHTML += `<li class="py-2 border-b border-slate-100 flex justify-between"><div><strong class="block">${z.code}</strong><span class="text-slate-400 text-[10px]">${wh ? wh.name : 'N/A'} · Capacidad Max: ${z.maxM2} m²</span></div></li>`;
                 });
             }
         }
@@ -1615,7 +1795,11 @@
             const tbody = document.getElementById('audit-table-body');
             if (!tbody) return;
             tbody.innerHTML = '';
-            state.auditLogs.forEach(log => {
+            const filteredLogs = state.globalFilterWarehouseId === 'ALL'
+                ? state.auditLogs
+                : state.auditLogs.filter(log => log.warehouseId === state.globalFilterWarehouseId);
+
+            filteredLogs.forEach(log => {
                 tbody.innerHTML += `
                     <tr>
                         <td class="p-3 text-slate-500 font-mono">${log.timestamp}</td>
@@ -1661,11 +1845,24 @@
                 if (el) el.innerHTML = clientOpts;
             });
 
-            // Zones dropdowns
-            const zoneOpts = state.zones.map(z => `<option value="${z.id}">${z.code} (Máx: ${z.maxM2} m²)</option>`).join('');
+            // Zones dropdowns (prefixed with bodega name since zones now belong to a specific warehouse)
+            const zoneOpts = state.zones.map(z => {
+                const wh = state.warehouses.find(w => w.id === z.warehouseId);
+                return `<option value="${z.id}">[${wh ? wh.name : 'N/A'}] ${z.code} (Máx: ${z.maxM2} m²)</option>`;
+            }).join('');
             ['select-alloc-zone', 'inbound-zone'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.innerHTML = zoneOpts;
+            });
+
+            // Warehouse dropdowns (new zone modal & new invoice modal)
+            const whOpts = state.warehouses.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
+            ['new-zone-warehouse', 'invoice-warehouse'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.innerHTML = whOpts;
+                    el.value = state.currentWarehouseId;
+                }
             });
 
             filterProductsByClient();
@@ -1674,7 +1871,8 @@
             const stockOpts = state.stock.map(s => {
                 const prod = state.products.find(p => p.id === s.productId);
                 const zone = state.zones.find(z => z.id === s.zoneId);
-                return `<option value="${s.id}">${prod ? prod.sku + ' - ' + prod.name : 'N/A'} (Cant: ${s.quantity} en ${zone ? zone.code : ''})</option>`;
+                const wh = state.warehouses.find(w => w.id === zone?.warehouseId);
+                return `<option value="${s.id}">${prod ? prod.sku + ' - ' + prod.name : 'N/A'} (Cant: ${s.quantity} en ${zone ? zone.code : ''}${wh ? ' - ' + wh.name : ''})</option>`;
             }).join('');
 
             ['outbound-stock-item', 'adjust-stock-item'].forEach(id => {
@@ -1691,20 +1889,56 @@
             if (el) el.innerHTML = prodOpts || '<option value="">Sin productos registrados</option>';
         }
 
+        function openWarehouseSettingsModal() {
+            const warehouse = getCurrentWarehouse();
+            if (!warehouse) return showToast('Cree primero una bodega', 'error');
+
+            const nameInput = document.getElementById('input-wh-name');
+            const areaInput = document.getElementById('input-wh-area');
+            if (nameInput) nameInput.value = warehouse.name;
+            if (areaInput) areaInput.value = warehouse.totalAreaM2;
+
+            openModal('modal-update-warehouse');
+        }
+
         function saveWarehouseCapacity() {
             const areaInput = document.getElementById('input-wh-area');
             const nameInput = document.getElementById('input-wh-name');
             if (!areaInput || !nameInput) return;
 
+            const warehouse = getCurrentWarehouse();
+            if (!warehouse) return;
+
             const newArea = Number(areaInput.value);
             const newName = nameInput.value;
             if (newArea <= 0) return showToast('Ingrese un área válida', 'error');
 
-            state.warehouse.totalAreaM2 = newArea;
-            state.warehouse.name = newName;
-            logAudit('OCUPACION', 'Cambio Capacidad Bodega', `Área ajustada a ${newArea} m²`);
+            warehouse.totalAreaM2 = newArea;
+            warehouse.name = newName;
+            logAudit('OCUPACION', 'Cambio Capacidad Bodega', `${newName}: área ajustada a ${newArea} m²`, 'Bryan', warehouse.id);
             showToast('Medidas de bodega actualizadas', 'success');
             closeModal('modal-update-warehouse');
+            refreshAllViews();
+        }
+
+        function saveNewWarehouse() {
+            const nameInput = document.getElementById('input-new-wh-name');
+            const areaInput = document.getElementById('input-new-wh-area');
+            if (!nameInput || !areaInput) return;
+
+            const name = nameInput.value.trim();
+            const area = Number(areaInput.value);
+            if (!name || area <= 0) return showToast('Ingrese nombre y área válidos', 'error');
+
+            const id = `WH-${Date.now()}`;
+            state.warehouses.push({ id, name, totalAreaM2: area });
+            state.currentWarehouseId = id;
+
+            logAudit('MAESTROS', 'Nueva Bodega', `Bodega ${name} (${area} m²) creada`, 'Bryan', id);
+            showToast('Bodega creada exitosamente', 'success');
+            closeModal('modal-new-warehouse');
+            nameInput.value = '';
+            areaInput.value = '';
             refreshAllViews();
         }
 
@@ -1721,7 +1955,7 @@
             zone.clientId = clientId;
             zone.occupiedM2 = m2;
 
-            logAudit('OCUPACION', 'Asignación de Espacio', `Se asignaron ${m2} m² de ${zone.code} al cliente ${client.name}`);
+            logAudit('OCUPACION', 'Asignación de Espacio', `Se asignaron ${m2} m² de ${zone.code} al cliente ${client.name}`, 'Bryan', zone.warehouseId);
             showToast('Espacio asignado exitosamente', 'success');
             closeModal('modal-allocate-zone');
             refreshAllViews();
@@ -1732,7 +1966,7 @@
             if (zone) {
                 zone.clientId = null;
                 zone.occupiedM2 = 0;
-                logAudit('OCUPACION', 'Liberación de Espacio', `Se liberó el espacio de ${zone.code}`);
+                logAudit('OCUPACION', 'Liberación de Espacio', `Se liberó el espacio de ${zone.code}`, 'Bryan', zone.warehouseId);
                 showToast(`Espacio en ${zone.code} liberado`, 'info');
                 refreshAllViews();
             }
@@ -1749,9 +1983,10 @@
 
             const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
             const ingId = `ING-2026-00${state.inbounds.length + 1}`;
+            const zoneWarehouseId = getZoneWarehouseId(zoneId);
 
             // 1. Record Inbound
-            state.inbounds.unshift({ id: ingId, timestamp, clientId, productId, zoneId, qty, m2, user: 'Bryan' });
+            state.inbounds.unshift({ id: ingId, timestamp, clientId, productId, zoneId, warehouseId: zoneWarehouseId, qty, m2, user: 'Bryan' });
 
             // 2. Update Stock
             let existingStock = state.stock.find(s => s.productId === productId && s.zoneId === zoneId);
@@ -1784,10 +2019,11 @@
                 out: 0,
                 balance: currentBalance,
                 zone: zone ? zone.code : '',
+                warehouseId: zoneWarehouseId,
                 details: `Ingreso Documento ${ingId}`
             });
 
-            logAudit('INGRESOS', 'Recepcion Mercancía', `Ingreso de ${qty} un. de ${prod?.sku} en ${zone?.code}`);
+            logAudit('INGRESOS', 'Recepcion Mercancía', `Ingreso de ${qty} un. de ${prod?.sku} en ${zone?.code}`, 'Bryan', zoneWarehouseId);
             showToast('Ingreso registrado correctamente', 'success');
             closeModal('modal-new-inbound');
             refreshAllViews();
@@ -1809,9 +2045,10 @@
             const prod = state.products.find(p => p.id === stk.productId);
             const client = state.clients.find(c => c.id === stk.clientId);
             const zone = state.zones.find(z => z.id === stk.zoneId);
+            const zoneWarehouseId = zone?.warehouseId || null;
 
             // Record Outbound
-            state.outbounds.unshift({ id: salId, timestamp, clientId: stk.clientId, productId: stk.productId, zoneId: stk.zoneId, qty, destination, user: 'Bryan' });
+            state.outbounds.unshift({ id: salId, timestamp, clientId: stk.clientId, productId: stk.productId, zoneId: stk.zoneId, warehouseId: zoneWarehouseId, qty, destination, user: 'Bryan' });
 
             // Kardex
             state.kardex.unshift({
@@ -1824,10 +2061,11 @@
                 out: qty,
                 balance: stk.quantity,
                 zone: zone ? zone.code : '',
+                warehouseId: zoneWarehouseId,
                 details: `Despacho ${salId} - ${destination}`
             });
 
-            logAudit('SALIDAS', 'Despacho Mercancía', `Salida de ${qty} un. de ${prod?.sku} desde ${zone?.code}`);
+            logAudit('SALIDAS', 'Despacho Mercancía', `Salida de ${qty} un. de ${prod?.sku} desde ${zone?.code}`, 'Bryan', zoneWarehouseId);
             showToast('Salida/Despacho procesado exitosamente', 'success');
             closeModal('modal-new-outbound');
             refreshAllViews();
@@ -1851,6 +2089,7 @@
             const prod = state.products.find(p => p.id === stk.productId);
             const client = state.clients.find(c => c.id === stk.clientId);
             const zone = state.zones.find(z => z.id === stk.zoneId);
+            const zoneWarehouseId = zone?.warehouseId || null;
 
             state.kardex.unshift({
                 timestamp,
@@ -1862,10 +2101,11 @@
                 out: type === 'NEG' ? qty : 0,
                 balance: stk.quantity,
                 zone: zone ? zone.code : '',
+                warehouseId: zoneWarehouseId,
                 details: `Ajuste (${type}): ${reason}`
             });
 
-            logAudit('INVENTARIO', 'Ajuste Manual', `Ajuste ${type} de ${qty} un. en SKU ${prod?.sku}`);
+            logAudit('INVENTARIO', 'Ajuste Manual', `Ajuste ${type} de ${qty} un. en SKU ${prod?.sku}`, 'Bryan', zoneWarehouseId);
             showToast('Ajuste de inventario guardado', 'success');
             closeModal('modal-adjust-stock');
             refreshAllViews();
@@ -1873,6 +2113,7 @@
 
         function saveNewInvoice() {
             const clientId = document.getElementById('invoice-client')?.value;
+            const warehouseId = document.getElementById('invoice-warehouse')?.value;
             const number = document.getElementById('invoice-number')?.value || `FAC-2026-${state.invoices.length + 1}`;
             const issueDate = document.getElementById('invoice-issue-date')?.value;
             const dueDate = document.getElementById('invoice-due-date')?.value;
@@ -1885,10 +2126,11 @@
             const status = dueDate < today ? 'VENCIDA' : 'PENDIENTE';
 
             const invId = `INV-${Date.now()}`;
-            state.invoices.unshift({ id: invId, number, clientId, issueDate, dueDate, total, status });
+            state.invoices.unshift({ id: invId, number, clientId, warehouseId, issueDate, dueDate, total, status });
 
             const client = state.clients.find(c => c.id === clientId)?.name;
-            logAudit('CARTERA', 'Registro Factura', `Factura ${number} por $${total} creada para ${client}`);
+            const warehouse = state.warehouses.find(w => w.id === warehouseId)?.name;
+            logAudit('CARTERA', 'Registro Factura', `Factura ${number} por $${total} creada para ${client} (${warehouse})`, 'Bryan', warehouseId);
             showToast('Factura registrada en Cartera', 'success');
             closeModal('modal-new-invoice');
             refreshAllViews();
@@ -1922,13 +2164,16 @@
         }
 
         function saveNewZone() {
+            const warehouseId = document.getElementById('new-zone-warehouse')?.value;
             const code = document.getElementById('new-zone-code')?.value;
             const maxM2 = Number(document.getElementById('new-zone-m2')?.value);
+            if (!warehouseId) return showToast('Cree primero una bodega', 'error');
             if (!code || maxM2 <= 0) return showToast('Ingrese datos válidos de zona', 'error');
 
+            const warehouse = state.warehouses.find(w => w.id === warehouseId);
             const id = `Z-${Date.now()}`;
-            state.zones.push({ id, code, maxM2, occupiedM2: 0, clientId: null });
-            logAudit('MAESTROS', 'Nueva Zona', `Zona ${code} (${maxM2} m²) creada`);
+            state.zones.push({ id, code, warehouseId, maxM2, occupiedM2: 0, clientId: null });
+            logAudit('MAESTROS', 'Nueva Zona', `Zona ${code} (${maxM2} m²) creada en ${warehouse ? warehouse.name : ''}`, 'Bryan', warehouseId);
             showToast('Zona creada', 'success');
             closeModal('modal-new-zone');
             refreshAllViews();
