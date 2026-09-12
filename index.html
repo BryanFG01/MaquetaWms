@@ -8,8 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- jsQR: decodifica códigos QR desde la cámara para el conteo de inventario -->
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <!-- ZXing: decodifica códigos QR Y códigos de barras (Code128, EAN, UPC, Code39, etc.) desde la cámara -->
+    <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js"></script>
     <!-- QRCode.js: genera los códigos QR de cada ítem de inventario para poder escanearlos -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- FontAwesome Icons -->
@@ -1026,7 +1026,7 @@
             <h3 class="text-base font-bold text-slate-800 mb-1 flex items-center text-indigo-700">
                 <i class="fa-solid fa-qrcode mr-2"></i> Conteo de Inventario por QR
             </h3>
-            <p class="text-[11px] text-slate-500 mb-3">Escanee el código QR pegado en la ubicación / producto para registrar la cantidad contada automáticamente.</p>
+            <p class="text-[11px] text-slate-500 mb-3">Escanee el código QR o de barras pegado en la ubicación / producto para registrar la cantidad contada automáticamente.</p>
 
             <!-- Live camera scan view -->
             <div id="qr-scan-camera-view">
@@ -1034,7 +1034,6 @@
                     <video id="qr-scan-video" class="w-full h-full object-cover" playsinline muted></video>
                     <div class="absolute inset-0 border-[3px] border-indigo-400/70 m-10 rounded-xl pointer-events-none"></div>
                 </div>
-                <canvas id="qr-scan-canvas" class="hidden"></canvas>
                 <p id="qr-scan-status" class="text-xs text-center text-slate-500 mt-2">Iniciando cámara...</p>
             </div>
 
@@ -2323,8 +2322,9 @@
             openModal('modal-view-qr');
         }
 
-        // --- Escaneo por cámara ---
-        const qrScan = { stream: null, animationId: null, active: false, matchedStock: null };
+        // --- Escaneo por cámara (QR y códigos de barras: Code128, EAN, UPC, Code39, etc.) ---
+        const qrScan = { active: false, matchedStock: null };
+        let zxingReader = null;
 
         function openQrScanModal() {
             document.getElementById('qr-scan-result').classList.add('hidden');
@@ -2342,7 +2342,7 @@
         async function startQrCamera() {
             const statusEl = document.getElementById('qr-scan-status');
             const video = document.getElementById('qr-scan-video');
-            if (!window.jsQR) {
+            if (!window.ZXing) {
                 if (statusEl) statusEl.textContent = 'Librería de escaneo no disponible (sin conexión). Use el código manual abajo.';
                 return;
             }
@@ -2352,46 +2352,32 @@
             }
             try {
                 if (statusEl) statusEl.textContent = 'Solicitando acceso a la cámara...';
-                qrScan.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                video.srcObject = qrScan.stream;
-                await video.play();
+                if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader();
                 qrScan.active = true;
-                if (statusEl) statusEl.textContent = 'Apunte la cámara al código QR...';
-                qrScan.animationId = requestAnimationFrame(tickQrScan);
+
+                await zxingReader.decodeFromConstraints(
+                    { video: { facingMode: 'environment' } },
+                    video,
+                    (result, err) => {
+                        if (!qrScan.active) return;
+                        if (result) {
+                            handleQrDecoded(result.getText());
+                        }
+                        // "err" se dispara constantemente mientras no hay ningún código en cuadro: se ignora.
+                    }
+                );
+                if (statusEl) statusEl.textContent = 'Apunte la cámara al código QR o de barras...';
             } catch (err) {
+                qrScan.active = false;
                 if (statusEl) statusEl.textContent = 'No se pudo acceder a la cámara (permiso denegado o no disponible). Use el código manual abajo.';
             }
         }
 
         function stopQrCamera() {
             qrScan.active = false;
-            if (qrScan.animationId) cancelAnimationFrame(qrScan.animationId);
-            qrScan.animationId = null;
-            if (qrScan.stream) {
-                qrScan.stream.getTracks().forEach(track => track.stop());
-                qrScan.stream = null;
+            if (zxingReader) {
+                try { zxingReader.reset(); } catch (e) { /* ya estaba detenido */ }
             }
-        }
-
-        function tickQrScan() {
-            if (!qrScan.active) return;
-            const video = document.getElementById('qr-scan-video');
-            const canvas = document.getElementById('qr-scan-canvas');
-
-            if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-                const ctx = canvas.getContext('2d');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-                if (code && code.data) {
-                    handleQrDecoded(code.data);
-                    return;
-                }
-            }
-            qrScan.animationId = requestAnimationFrame(tickQrScan);
         }
 
         function playScanBeep() {
