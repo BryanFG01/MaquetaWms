@@ -2465,7 +2465,51 @@
             handleQrDecoded(code);
         }
 
-        function findStockByScannedCode(code) {
+        // Algunos generadores de QR externos (ej. qrcode-monkey.com) producen un QR que en
+        // realidad codifica la URL de su propio editor, dejando el texto/JSON real en "#text=...".
+        // Esto lo detecta y recupera el contenido real antes de intentar hacer match.
+        function extractScannableText(raw) {
+            const hashMatch = raw.match(/#text=([^&]+)/i);
+            if (hashMatch) {
+                try { return decodeURIComponent(hashMatch[1]); } catch (e) { return hashMatch[1]; }
+            }
+            return raw;
+        }
+
+        function tryParseJson(text) {
+            try {
+                const obj = JSON.parse(text);
+                return (obj && typeof obj === 'object') ? obj : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // Normaliza el texto escaneado (ver extractScannableText) e intenta interpretarlo como
+        // JSON con campos tipo {Producto, SKU, Cantidad, Ubicacion, Cliente} generado externamente.
+        function parseScannedCode(rawCode) {
+            const code = extractScannableText(rawCode).trim();
+            const parsed = tryParseJson(code);
+            return { code, parsed };
+        }
+
+        function findStockByScannedCode(rawCode) {
+            const { code, parsed } = parseScannedCode(rawCode);
+
+            if (parsed) {
+                const skuGuess = parsed.sku || parsed.SKU || parsed.Sku;
+                if (skuGuess) {
+                    const prodBySku = state.products.find(p => p.sku.toLowerCase() === String(skuGuess).toLowerCase());
+                    if (prodBySku) return state.stock.filter(s => s.productId === prodBySku.id);
+                }
+
+                const nameGuess = parsed.Producto || parsed.producto || parsed.name || parsed.Nombre || parsed.nombre;
+                if (nameGuess) {
+                    const prodByName = state.products.find(p => p.name.toLowerCase() === String(nameGuess).toLowerCase());
+                    if (prodByName) return state.stock.filter(s => s.productId === prodByName.id);
+                }
+            }
+
             // 1. Coincidencia directa por ID de ítem de stock (impreso en la etiqueta QR)
             let stk = state.stock.find(s => s.id.toLowerCase() === code.toLowerCase());
             if (stk) return [stk];
@@ -2477,13 +2521,13 @@
             return [];
         }
 
-        function handleQrDecoded(code) {
+        function handleQrDecoded(rawCode) {
             stopQrCamera();
-            const matches = findStockByScannedCode(code);
+            const matches = findStockByScannedCode(rawCode);
             playScanBeep();
 
             if (matches.length === 0) {
-                showQrNotFoundPanel(code);
+                showQrNotFoundPanel(rawCode);
                 return;
             }
 
@@ -2523,31 +2567,45 @@
         }
 
         // --- Registro de producto nuevo cuando el código escaneado no existe en el inventario ---
-        function showQrNotFoundPanel(code) {
+        function showQrNotFoundPanel(rawCode) {
             document.getElementById('qr-scan-camera-view').classList.add('hidden');
             document.getElementById('qr-scan-result').classList.add('hidden');
             document.getElementById('qr-scan-notfound').classList.remove('hidden');
 
-            setSafeText('qr-notfound-code', code);
+            const { code, parsed } = parseScannedCode(rawCode);
+            const displayCode = code.length > 90 ? code.slice(0, 90) + '…' : code;
+            setSafeText('qr-notfound-code', displayCode);
+
+            const skuGuess = parsed ? (parsed.sku || parsed.SKU || parsed.Sku || '') : code;
+            const nameGuess = parsed ? (parsed.Producto || parsed.producto || parsed.name || parsed.Nombre || parsed.nombre || '') : '';
+            const qtyGuess = parsed && parsed.Cantidad ? Number(parsed.Cantidad) : (parsed && parsed.cantidad ? Number(parsed.cantidad) : 1);
 
             const skuInput = document.getElementById('qr-new-sku');
-            if (skuInput) skuInput.value = code;
+            if (skuInput) skuInput.value = skuGuess;
             const nameInput = document.getElementById('qr-new-name');
-            if (nameInput) nameInput.value = '';
+            if (nameInput) nameInput.value = nameGuess;
             const qtyInput = document.getElementById('qr-new-qty');
-            if (qtyInput) qtyInput.value = 1;
+            if (qtyInput) qtyInput.value = (qtyGuess > 0) ? qtyGuess : 1;
             const m2Input = document.getElementById('qr-new-m2');
             if (m2Input) m2Input.value = 0;
 
+            const clientGuess = parsed ? String(parsed.Cliente || parsed.cliente || '').toLowerCase() : '';
             const clientSel = document.getElementById('qr-new-client');
-            if (clientSel) clientSel.innerHTML = state.clients.map(c => `<option value="${c.id}">${c.name} (${c.nit})</option>`).join('');
+            if (clientSel) {
+                clientSel.innerHTML = state.clients.map(c => `<option value="${c.id}">${c.name} (${c.nit})</option>`).join('');
+                const matchedClient = clientGuess && state.clients.find(c => c.name.toLowerCase() === clientGuess);
+                if (matchedClient) clientSel.value = matchedClient.id;
+            }
 
+            const zoneGuess = parsed ? String(parsed.Ubicacion || parsed.ubicacion || parsed.Zona || parsed.zona || '').toLowerCase() : '';
             const zoneSel = document.getElementById('qr-new-zone');
             if (zoneSel) {
                 zoneSel.innerHTML = state.zones.map(z => {
                     const wh = state.warehouses.find(w => w.id === z.warehouseId);
                     return `<option value="${z.id}">[${wh ? wh.name : 'N/A'}] ${z.code}</option>`;
                 }).join('');
+                const matchedZone = zoneGuess && state.zones.find(z => z.code.toLowerCase().includes(zoneGuess));
+                if (matchedZone) zoneSel.value = matchedZone.id;
             }
         }
 
