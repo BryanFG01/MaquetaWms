@@ -1084,6 +1084,47 @@
                 </div>
             </div>
 
+            <!-- Not-found panel: shown when the scanned code has no match, offers to register it as a new product -->
+            <div id="qr-scan-notfound" class="hidden mt-3 pt-3 border-t border-slate-100 space-y-3 text-xs">
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p class="font-bold text-amber-800"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Código no registrado en el inventario</p>
+                    <p class="text-amber-700">Código escaneado: <strong id="qr-notfound-code"></strong></p>
+                    <p class="text-slate-500 mt-1">Complete los datos para registrarlo como producto nuevo.</p>
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">SKU</label>
+                    <input type="text" id="qr-new-sku" class="w-full p-2 border border-slate-300 rounded-lg">
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-700 mb-1">Nombre / Descripción del Producto</label>
+                    <input type="text" id="qr-new-name" placeholder="Ej: Cable Acero Galv. 1/4&quot;" class="w-full p-2 border border-slate-300 rounded-lg">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Cliente Propietario</label>
+                        <select id="qr-new-client" class="w-full p-2 border border-slate-300 rounded-lg"></select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Ubicación / Zona</label>
+                        <select id="qr-new-zone" class="w-full p-2 border border-slate-300 rounded-lg"></select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Cantidad Inicial</label>
+                        <input type="number" id="qr-new-qty" min="1" value="1" class="w-full p-2 border border-slate-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-700 mb-1">Área Consumida (m²)</label>
+                        <input type="number" id="qr-new-m2" min="0" value="0" class="w-full p-2 border border-slate-300 rounded-lg">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button onclick="cancelQrNotFound()" class="px-3 py-1.5 border border-slate-300 rounded-lg text-slate-600">Escanear Otro</button>
+                    <button onclick="registerNewProductFromQr()" class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-semibold">Registrar Producto</button>
+                </div>
+            </div>
+
             <div class="mt-4 flex justify-end text-xs">
                 <button onclick="closeQrScanModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-slate-600">Cerrar</button>
             </div>
@@ -2348,6 +2389,7 @@
 
         function openQrScanModal() {
             document.getElementById('qr-scan-result').classList.add('hidden');
+            document.getElementById('qr-scan-notfound').classList.add('hidden');
             document.getElementById('qr-scan-camera-view').classList.remove('hidden');
             document.getElementById('qr-manual-input').value = '';
             openModal('modal-scan-qr');
@@ -2437,18 +2479,13 @@
 
         function handleQrDecoded(code) {
             stopQrCamera();
-            const statusEl = document.getElementById('qr-scan-status');
             const matches = findStockByScannedCode(code);
+            playScanBeep();
 
             if (matches.length === 0) {
-                playScanBeep();
-                showToast(`Código "${code}" no corresponde a ningún ítem de inventario`, 'error');
-                if (statusEl) statusEl.textContent = 'Código no reconocido. Intente de nuevo o reanude la cámara.';
-                startQrCamera();
+                showQrNotFoundPanel(code);
                 return;
             }
-
-            playScanBeep();
 
             if (matches.length > 1) {
                 // Producto presente en varias ubicaciones: se toma la de mayor existencia por defecto
@@ -2482,6 +2519,93 @@
             document.getElementById('qr-scan-result').classList.add('hidden');
             document.getElementById('qr-scan-camera-view').classList.remove('hidden');
             document.getElementById('qr-manual-input').value = '';
+            startQrCamera();
+        }
+
+        // --- Registro de producto nuevo cuando el código escaneado no existe en el inventario ---
+        function showQrNotFoundPanel(code) {
+            document.getElementById('qr-scan-camera-view').classList.add('hidden');
+            document.getElementById('qr-scan-result').classList.add('hidden');
+            document.getElementById('qr-scan-notfound').classList.remove('hidden');
+
+            setSafeText('qr-notfound-code', code);
+
+            const skuInput = document.getElementById('qr-new-sku');
+            if (skuInput) skuInput.value = code;
+            const nameInput = document.getElementById('qr-new-name');
+            if (nameInput) nameInput.value = '';
+            const qtyInput = document.getElementById('qr-new-qty');
+            if (qtyInput) qtyInput.value = 1;
+            const m2Input = document.getElementById('qr-new-m2');
+            if (m2Input) m2Input.value = 0;
+
+            const clientSel = document.getElementById('qr-new-client');
+            if (clientSel) clientSel.innerHTML = state.clients.map(c => `<option value="${c.id}">${c.name} (${c.nit})</option>`).join('');
+
+            const zoneSel = document.getElementById('qr-new-zone');
+            if (zoneSel) {
+                zoneSel.innerHTML = state.zones.map(z => {
+                    const wh = state.warehouses.find(w => w.id === z.warehouseId);
+                    return `<option value="${z.id}">[${wh ? wh.name : 'N/A'}] ${z.code}</option>`;
+                }).join('');
+            }
+        }
+
+        function cancelQrNotFound() {
+            document.getElementById('qr-scan-notfound').classList.add('hidden');
+            document.getElementById('qr-scan-camera-view').classList.remove('hidden');
+            document.getElementById('qr-manual-input').value = '';
+            startQrCamera();
+        }
+
+        function registerNewProductFromQr() {
+            const sku = document.getElementById('qr-new-sku')?.value.trim();
+            const name = document.getElementById('qr-new-name')?.value.trim();
+            const clientId = document.getElementById('qr-new-client')?.value;
+            const zoneId = document.getElementById('qr-new-zone')?.value;
+            const qty = Number(document.getElementById('qr-new-qty')?.value);
+            const m2 = Number(document.getElementById('qr-new-m2')?.value) || 0;
+
+            if (!sku || !name || !clientId || !zoneId) return showToast('Complete SKU, nombre, cliente y ubicación', 'error');
+            if (qty <= 0) return showToast('Ingrese una cantidad inicial válida', 'error');
+            if (state.products.some(p => p.sku.toLowerCase() === sku.toLowerCase())) return showToast('Ya existe un producto con ese SKU', 'error');
+
+            const productId = `P-${Date.now()}`;
+            state.products.push({ id: productId, sku, name, clientId });
+
+            const stockId = `STK-${Date.now()}`;
+            state.stock.push({ id: stockId, productId, zoneId, clientId, quantity: qty, m2Used: m2 });
+
+            const zone = state.zones.find(z => z.id === zoneId);
+            if (zone) {
+                zone.occupiedM2 += m2;
+                if (!zone.clientId) zone.clientId = clientId;
+            }
+
+            const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+            const client = state.clients.find(c => c.id === clientId);
+
+            state.kardex.unshift({
+                timestamp,
+                type: 'ENTRADA',
+                sku,
+                productName: name,
+                clientName: client ? client.name : '',
+                in: qty,
+                out: 0,
+                balance: qty,
+                zone: zone ? zone.code : '',
+                warehouseId: zone?.warehouseId || null,
+                details: `Producto nuevo registrado por escaneo QR/código de barras (${sku})`
+            });
+
+            logAudit('INVENTARIO', 'Producto Nuevo por Escaneo', `Se registró ${sku} - ${name} (${qty} un.) en ${zone?.code} vía escaneo QR`, 'Bryan', zone?.warehouseId);
+            showToast(`Producto ${sku} registrado con ${qty} un.`, 'success');
+
+            document.getElementById('qr-scan-notfound').classList.add('hidden');
+            document.getElementById('qr-scan-camera-view').classList.remove('hidden');
+            document.getElementById('qr-manual-input').value = '';
+            refreshAllViews();
             startQrCamera();
         }
 
